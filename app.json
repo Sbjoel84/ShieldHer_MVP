@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "ShieldHer",
+    "slug": "ShieldHer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#3B0764"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "ShieldHer records audio evidence during emergencies. Recordings are stored privately on your device.",
+        "NSLocationWhenInUseUsageDescription": "ShieldHer uses your location to send your position to trusted contacts during an SOS alert.",
+        "NSLocationAlwaysUsageDescription": "ShieldHer can monitor your location during Safe Walk journeys."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "READ_CONTACTS",
+        "SEND_SMS",
+        "VIBRATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
