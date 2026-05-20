@@ -226,7 +226,7 @@ export const HomeScreen = () => {
           </View>
           <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}
             onPress={() => navigation.navigate('Alerts')}>
-            <MaterialCommunityIcons name="bell-outline" size={22} color={colors.accentText} />
+            <MaterialCommunityIcons name="bell-badge" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -544,12 +544,17 @@ function makeStyles(colors: ThemeColors, isDark = false) {
     greeting: { fontSize: 20, fontWeight: '800', color: colors.accentText },
     tagline: { fontSize: 11, color: isDark ? '#A78BFA' : '#7C3AED', fontWeight: '500', marginTop: 1 },
     bellBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
-      backgroundColor: '#EDE9FE',
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: '#7C3AED',
       alignItems: 'center',
       justifyContent: 'center',
+      shadowColor: '#7C3AED',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.35,
+      shadowRadius: 6,
+      elevation: 4,
     },
 
     shakeToast: {
