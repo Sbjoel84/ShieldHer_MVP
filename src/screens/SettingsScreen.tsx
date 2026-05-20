@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppSettings } from '../context/AppSettingsContext';
+import { useTheme, ThemeColors } from '../theme';
 import { clearLog } from '../utils/activityLog';
 
 const SHAKE_KEY        = '@shieldher_shake_sensitivity_v1';
@@ -31,7 +32,9 @@ const SHAKE_OPTIONS: { key: ShakeSensitivity; label: string; desc: string }[] = 
 ];
 
 export function SettingsScreen() {
-  const { childMode, setChildMode } = useAppSettings();
+  const { childMode, setChildMode, darkMode, setDarkMode } = useAppSettings();
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
 
   const [shakeSensitivity, setShakeSensitivity] = useState<ShakeSensitivity>('medium');
   const [sosVibration, setSosVibration]         = useState(true);
@@ -145,8 +148,8 @@ export function SettingsScreen() {
           <Switch
             value={sosVibration}
             onValueChange={updateVibration}
-            trackColor={{ false: '#E5E7EB', true: '#C4B5FD' }}
-            thumbColor={sosVibration ? '#7C3AED' : '#fff'}
+            trackColor={{ false: colors.switchTrackOff, true: '#C4B5FD' }}
+            thumbColor={sosVibration ? '#7C3AED' : colors.switchThumbOff}
           />
         </View>
 
@@ -164,8 +167,31 @@ export function SettingsScreen() {
           <Switch
             value={locationShare}
             onValueChange={updateLocationShare}
-            trackColor={{ false: '#E5E7EB', true: '#BBF7D0' }}
-            thumbColor={locationShare ? '#16A34A' : '#fff'}
+            trackColor={{ false: colors.switchTrackOff, true: '#BBF7D0' }}
+            thumbColor={locationShare ? '#16A34A' : colors.switchThumbOff}
+          />
+        </View>
+
+        <View style={s.divider} />
+
+        {/* Dark Mode */}
+        <View style={s.toggleRow}>
+          <View style={[s.cardIcon, { backgroundColor: '#1E1B2E' }]}>
+            <MaterialCommunityIcons
+              name={darkMode ? 'weather-night' : 'white-balance-sunny'}
+              size={20}
+              color={darkMode ? '#A78BFA' : '#F59E0B'}
+            />
+          </View>
+          <View style={s.toggleText}>
+            <Text style={s.toggleTitle}>Dark Mode</Text>
+            <Text style={s.toggleSub}>Switch between light and dark theme</Text>
+          </View>
+          <Switch
+            value={darkMode}
+            onValueChange={setDarkMode}
+            trackColor={{ false: colors.switchTrackOff, true: '#5B21B6' }}
+            thumbColor={darkMode ? '#A78BFA' : colors.switchThumbOff}
           />
         </View>
 
@@ -183,8 +209,8 @@ export function SettingsScreen() {
           <Switch
             value={childMode}
             onValueChange={setChildMode}
-            trackColor={{ false: '#E5E7EB', true: '#C4B5FD' }}
-            thumbColor={childMode ? '#7C3AED' : '#fff'}
+            trackColor={{ false: colors.switchTrackOff, true: '#C4B5FD' }}
+            thumbColor={childMode ? '#7C3AED' : colors.switchThumbOff}
           />
         </View>
       </View>
@@ -210,7 +236,7 @@ export function SettingsScreen() {
               multiline
               autoFocus
               placeholder="Enter your SOS message..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textMuted}
             />
             <View style={s.msgBtns}>
               <TouchableOpacity style={s.msgReset} onPress={resetMsg}>
@@ -257,101 +283,106 @@ export function SettingsScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F9F5FF' },
-  content: { padding: 16, gap: 16, paddingBottom: 48 },
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.background },
+    content: { padding: 16, gap: 16, paddingBottom: 48 },
 
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    padding: 16,
-    gap: 14,
-    shadowColor: '#3B0764',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  cardIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  cardHeaderText: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: '#1b1c1c' },
-  cardSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      overflow: 'hidden',
+      padding: 16,
+      gap: 14,
+      shadowColor: '#3B0764',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+    cardIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    cardHeaderText: { flex: 1 },
+    cardTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+    cardSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
 
-  optionRow: { gap: 8 },
-  optionBtn: {
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9F5FF',
-  },
-  optionBtnActive: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
-  optionLabel: { fontSize: 14, fontWeight: '700', color: '#374151' },
-  optionLabelActive: { color: '#fff' },
-  optionDesc: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+    optionRow: { gap: 8 },
+    optionBtn: {
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: colors.chipBorder,
+      backgroundColor: colors.optionBg,
+    },
+    optionBtnActive: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
+    optionLabel: { fontSize: 14, fontWeight: '700', color: colors.text },
+    optionLabelActive: { color: '#fff' },
+    optionDesc: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
 
-  divider: { height: 1, backgroundColor: '#F3F4F6' },
+    divider: { height: 1, backgroundColor: colors.divider },
 
-  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  toggleText: { flex: 1 },
-  toggleTitle: { fontSize: 14, fontWeight: '700', color: '#1b1c1c' },
-  toggleSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+    toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    toggleText: { flex: 1 },
+    toggleTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+    toggleSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
 
-  msgEdit: { gap: 10 },
-  msgInput: {
-    borderWidth: 1.5,
-    borderColor: '#C4B5FD',
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 13,
-    color: '#1b1c1c',
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  msgBtns: { flexDirection: 'row', gap: 8 },
-  msgReset: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1.5, borderColor: '#E5E7EB', alignItems: 'center' },
-  msgResetText: { fontSize: 12, color: '#6B7280', fontWeight: '600' },
-  msgCancel: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1.5, borderColor: '#E5E7EB', alignItems: 'center' },
-  msgCancelText: { fontSize: 12, color: '#6B7280', fontWeight: '600' },
-  msgSave: { flex: 2, padding: 10, borderRadius: 8, backgroundColor: '#7C3AED', alignItems: 'center' },
-  msgSaveText: { fontSize: 12, color: '#fff', fontWeight: '700' },
+    msgEdit: { gap: 10 },
+    msgInput: {
+      borderWidth: 1.5,
+      borderColor: colors.inputBorder,
+      borderRadius: 12,
+      padding: 12,
+      fontSize: 13,
+      color: colors.text,
+      minHeight: 100,
+      textAlignVertical: 'top',
+      backgroundColor: colors.inputBg,
+    },
+    msgBtns: { flexDirection: 'row', gap: 8 },
+    msgReset: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1.5, borderColor: colors.chipBorder, alignItems: 'center' },
+    msgResetText: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+    msgCancel: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1.5, borderColor: colors.chipBorder, alignItems: 'center' },
+    msgCancelText: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+    msgSave: { flex: 2, padding: 10, borderRadius: 8, backgroundColor: '#7C3AED', alignItems: 'center' },
+    msgSaveText: { fontSize: 12, color: '#fff', fontWeight: '700' },
 
-  msgPreview: { gap: 10 },
-  msgText: {
-    fontSize: 13,
-    color: '#374151',
-    lineHeight: 20,
-    backgroundColor: '#F9F5FF',
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#EDE9FE',
-  },
-  editMsgBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    backgroundColor: '#EDE9FE',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  editMsgBtnText: { fontSize: 13, fontWeight: '600', color: '#7C3AED' },
+    msgPreview: { gap: 10 },
+    msgText: {
+      fontSize: 13,
+      color: colors.text,
+      lineHeight: 20,
+      backgroundColor: colors.backgroundSecondary,
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    editMsgBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      alignSelf: 'flex-start',
+      backgroundColor: '#EDE9FE',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+    },
+    editMsgBtnText: { fontSize: 13, fontWeight: '600', color: '#7C3AED' },
 
-  dangerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#FECACA',
-    backgroundColor: '#FFF5F5',
-  },
-  dangerBtnText: { fontSize: 14, fontWeight: '600', color: '#DC2626' },
+    dangerBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: '#FECACA',
+      backgroundColor: '#FFF5F5',
+    },
+    dangerBtnText: { fontSize: 14, fontWeight: '600', color: '#DC2626' },
 
-  note: { textAlign: 'center', fontSize: 12, color: '#9CA3AF' },
-});
+    note: { textAlign: 'center', fontSize: 12, color: colors.textMuted },
+  });
+}

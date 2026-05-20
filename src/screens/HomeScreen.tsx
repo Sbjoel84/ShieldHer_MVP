@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { useContacts } from '../context/ContactsContext';
 import { useAppSettings } from '../context/AppSettingsContext';
+import { useTheme, ThemeColors } from '../theme';
 import { FakeCallScreen } from './FakeCallScreen';
 import { useShakeDetection } from '../hooks/useShakeDetection';
 import type { UnsafeArea } from './UnsafeAreaScreen';
@@ -55,6 +56,8 @@ export const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const { contacts } = useContacts();
   const { childMode } = useAppSettings();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   const insets = useSafeAreaInsets();
   const [userName, setUserName] = useState('Sarah');
 
@@ -212,18 +215,18 @@ export const HomeScreen = () => {
               activeOpacity={0.7}
               hitSlop={8}
             >
-              <MaterialCommunityIcons name="menu" size={26} color="#3B0764" />
+              <MaterialCommunityIcons name="menu" size={26} color={colors.accentText} />
             </TouchableOpacity>
             <View>
               <TouchableOpacity onPress={onHiddenTap} activeOpacity={1}>
-                <Text style={styles.greeting}>Hello, {userName} 👋</Text>
+                <Text style={styles.greeting}>Hello, {userName} 🔥</Text>
               </TouchableOpacity>
               <Text style={styles.tagline}>Smart Safety. Stronger Together.</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}
             onPress={() => navigation.navigate('Alerts')}>
-            <MaterialCommunityIcons name="bell-outline" size={22} color="#3B0764" />
+            <MaterialCommunityIcons name="bell-outline" size={22} color={colors.accentText} />
           </TouchableOpacity>
         </View>
 
@@ -339,6 +342,7 @@ export const HomeScreen = () => {
               label={childMode ? 'My People 👨‍👩‍👧' : 'Trusted Contacts'}
               onPress={() => navigation.navigate('Emergency Contacts')}
               childMode={childMode}
+              styles={styles}
             />
             <ActionCard
               icon="phone-incoming"
@@ -347,6 +351,7 @@ export const HomeScreen = () => {
               label={childMode ? 'Fake Call 📞' : 'Fake Call'}
               onPress={() => setShowFakeCall(true)}
               childMode={childMode}
+              styles={styles}
             />
             <ActionCard
               icon="map-marker-path"
@@ -355,6 +360,7 @@ export const HomeScreen = () => {
               label={childMode ? 'Safe Walk 🚶' : 'Journey Tracking'}
               onPress={() => navigation.navigate('Journey Tracking')}
               childMode={childMode}
+              styles={styles}
             />
             <ActionCard
               icon="lightbulb-on-outline"
@@ -363,6 +369,7 @@ export const HomeScreen = () => {
               label={childMode ? 'Stay Safe 💡' : 'Safety Tips'}
               onPress={() => navigation.navigate('Safety Tips')}
               childMode={childMode}
+              styles={styles}
             />
           </View>
 
@@ -385,6 +392,7 @@ export const HomeScreen = () => {
                   <ActivityItem
                     key={entry.id}
                     entry={entry}
+                    styles={styles}
                   />
                 ))
               )}
@@ -403,31 +411,43 @@ export const HomeScreen = () => {
       {sosPhase === 'active' && (
         <View style={styles.sosOverlay} pointerEvents="box-none">
           <View style={styles.sosOverlayCard}>
-            <MaterialCommunityIcons name="alert-circle" size={52} color="#dc2626" />
-            <Text style={styles.sosOverlayTitle}>SOS Activated</Text>
+            {/* Shield icon */}
+            <View style={styles.sosOverlayIconWrap}>
+              <MaterialCommunityIcons name="shield-check" size={44} color="#fff" />
+            </View>
+            <Text style={styles.sosOverlayTitle}>Help is on the way!</Text>
             <Text style={styles.sosOverlayBody}>
               {contacts.length > 0
-                ? `Alerting ${contacts.length} contact${contacts.length !== 1 ? 's' : ''} with your live location…`
-                : 'No contacts configured. Go to Trusted Contacts to add some.'}
+                ? `Sharing location with ${contacts.map(c => c.name).slice(0, 3).join(', ')}…`
+                : 'No contacts configured. Add contacts to receive your alerts.'}
             </Text>
-            <View style={styles.sosSteps}>
+
+            {/* 4-step progress */}
+            <View style={styles.sosProgressRow}>
               {[
-                { label: 'Alerts Sent', done: true },
-                { label: 'Location Shared', done: true },
-                { label: 'Help Notified', done: false },
+                { label: 'SOS\nTriggered',    icon: 'alert-circle',     done: true  },
+                { label: 'Alerts\nSent',       icon: 'bell-ring',        done: true  },
+                { label: 'Location\nShared',   icon: 'map-marker-check', done: true  },
+                { label: 'Help\nNotified',     icon: 'check-circle',     done: false },
               ].map((s, i) => (
-                <View key={i} style={styles.sosStep}>
-                  <MaterialCommunityIcons
-                    name={s.done ? 'check-circle' : 'clock-outline'}
-                    size={16}
-                    color={s.done ? '#16a34a' : '#9ca3af'}
-                  />
-                  <Text style={[styles.sosStepText, !s.done && { color: '#9ca3af' }]}>
-                    {s.label}
-                  </Text>
-                </View>
+                <React.Fragment key={i}>
+                  <View style={styles.sosProgressStep}>
+                    <View style={[styles.sosProgressDot, s.done && styles.sosProgressDotDone]}>
+                      <MaterialCommunityIcons
+                        name={s.icon as any}
+                        size={16}
+                        color={s.done ? '#fff' : '#9ca3af'}
+                      />
+                    </View>
+                    <Text style={[styles.sosProgressLabel, s.done && styles.sosProgressLabelDone]}>
+                      {s.label}
+                    </Text>
+                  </View>
+                  {i < 3 && <View style={[styles.sosProgressLine, s.done && styles.sosProgressLineDone]} />}
+                </React.Fragment>
               ))}
             </View>
+
             <TouchableOpacity style={styles.cancelBtnLarge} onPress={cancelSOS}>
               <Text style={styles.cancelBtnText}>Cancel SOS</Text>
             </TouchableOpacity>
@@ -449,10 +469,11 @@ export const HomeScreen = () => {
 };
 
 function ActionCard({
-  icon, iconBg, iconColor, label, onPress, childMode,
+  icon, iconBg, iconColor, label, onPress, childMode, styles,
 }: {
   icon: string; iconBg: string; iconColor: string;
   label: string; onPress: () => void; childMode?: boolean;
+  styles: ReturnType<typeof makeStyles>;
 }) {
   return (
     <TouchableOpacity
@@ -486,7 +507,7 @@ function timeAgo(ms: number): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function ActivityItem({ entry }: { entry: LogEntry }) {
+function ActivityItem({ entry, styles }: { entry: LogEntry; styles: ReturnType<typeof makeStyles> }) {
   const meta = ENTRY_META[entry.type] ?? ENTRY_META.checkin;
   return (
     <View style={styles.activityItem}>
@@ -504,247 +525,267 @@ function ActivityItem({ entry }: { entry: LogEntry }) {
 
 const SOS_SIZE = 140;
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F9F5FF' },
-  scrollContent: { flexGrow: 1, paddingBottom: 32 },
+function makeStyles(colors: ThemeColors, isDark = false) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.background },
+    scrollContent: { flexGrow: 1, paddingBottom: 32 },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EDE9FE',
-  },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  greeting: { fontSize: 20, fontWeight: '800', color: '#3B0764' },
-  tagline: { fontSize: 11, color: '#7C3AED', fontWeight: '500', marginTop: 1 },
-  bellBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#EDE9FE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.cardBorder,
+    },
+    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    greeting: { fontSize: 20, fontWeight: '800', color: colors.accentText },
+    tagline: { fontSize: 11, color: isDark ? '#A78BFA' : '#7C3AED', fontWeight: '500', marginTop: 1 },
+    bellBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: '#EDE9FE',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
 
-  // Toasts / banners
-  shakeToast: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#dc2626',
-    margin: 12,
-    marginBottom: 0,
-    padding: 12,
-    borderRadius: 12,
-  },
-  shakeToastText: { color: '#fff', fontWeight: '700', fontSize: 14, flex: 1 },
-  unsafeBanner: {
-    backgroundColor: '#BE185D',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-  unsafeBannerTitle: { fontSize: 13, fontWeight: '800', color: '#fff' },
-  unsafeBannerBody: { fontSize: 11, color: '#ffd6e0', marginTop: 1 },
+    shakeToast: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: '#dc2626',
+      margin: 12,
+      marginBottom: 0,
+      padding: 12,
+      borderRadius: 12,
+    },
+    shakeToastText: { color: '#fff', fontWeight: '700', fontSize: 14, flex: 1 },
+    unsafeBanner: {
+      backgroundColor: '#BE185D',
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+      paddingHorizontal: 16,
+      gap: 10,
+    },
+    unsafeBannerTitle: { fontSize: 13, fontWeight: '800', color: '#fff' },
+    unsafeBannerBody: { fontSize: 11, color: '#ffd6e0', marginTop: 1 },
 
-  content: { padding: 20, gap: 24 },
+    content: { padding: 20, gap: 24 },
 
-  // Status badge
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    alignSelf: 'center',
-  },
-  statusBadgeDanger: { backgroundColor: '#FEE2E2' },
-  statusText: { fontSize: 14, fontWeight: '700', color: '#16a34a' },
-  statusTextDanger: { color: '#dc2626' },
+    statusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: '#DCFCE7',
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      alignSelf: 'center',
+    },
+    statusBadgeDanger: { backgroundColor: '#FEE2E2' },
+    statusText: { fontSize: 14, fontWeight: '700', color: '#16a34a' },
+    statusTextDanger: { color: '#dc2626' },
 
-  // SOS
-  sosArea: { alignItems: 'center', paddingVertical: 10, gap: 16 },
-  sosRingOuter: {
-    position: 'absolute',
-    width: SOS_SIZE + 64,
-    height: SOS_SIZE + 64,
-    borderRadius: (SOS_SIZE + 64) / 2,
-    borderWidth: 1.5,
-    borderColor: '#E91E8C',
-    opacity: 0.15,
-    top: 10 - 32,
-  },
-  sosRingInner: {
-    position: 'absolute',
-    width: SOS_SIZE + 32,
-    height: SOS_SIZE + 32,
-    borderRadius: (SOS_SIZE + 32) / 2,
-    borderWidth: 1.5,
-    borderColor: '#E91E8C',
-    opacity: 0.25,
-    top: 10 - 16,
-  },
-  sosButton: {
-    width: SOS_SIZE,
-    height: SOS_SIZE,
-    borderRadius: SOS_SIZE / 2,
-    backgroundColor: '#E91E8C',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 12,
-    shadowColor: '#E91E8C',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-  },
-  sosButtonCountdown: { backgroundColor: '#dc2626' },
-  sosButtonActive: { backgroundColor: '#9B1C1C' },
-  sosText: { fontSize: 40, fontWeight: '900', color: '#fff', letterSpacing: -1 },
-  sosSub: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.85)', letterSpacing: 1, marginTop: 2 },
-  sosCountdownNum: { fontSize: 56, fontWeight: '900', color: '#fff' },
-  sosActiveLabel: { fontSize: 13, fontWeight: '700', color: '#fff', marginTop: 4, letterSpacing: 1 },
-  sosHint: { fontSize: 12, color: '#6B21A8', textAlign: 'center', maxWidth: 260 },
-  cancelBtn: {
-    backgroundColor: '#3B0764',
-    paddingHorizontal: 28,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  cancelBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+    sosArea: { alignItems: 'center', paddingVertical: 10, gap: 16 },
+    sosRingOuter: {
+      position: 'absolute',
+      width: SOS_SIZE + 64,
+      height: SOS_SIZE + 64,
+      borderRadius: (SOS_SIZE + 64) / 2,
+      borderWidth: 1.5,
+      borderColor: '#E91E8C',
+      opacity: 0.15,
+      top: 10 - 32,
+    },
+    sosRingInner: {
+      position: 'absolute',
+      width: SOS_SIZE + 32,
+      height: SOS_SIZE + 32,
+      borderRadius: (SOS_SIZE + 32) / 2,
+      borderWidth: 1.5,
+      borderColor: '#E91E8C',
+      opacity: 0.25,
+      top: 10 - 16,
+    },
+    sosButton: {
+      width: SOS_SIZE,
+      height: SOS_SIZE,
+      borderRadius: SOS_SIZE / 2,
+      backgroundColor: '#E91E8C',
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 12,
+      shadowColor: '#E91E8C',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.5,
+      shadowRadius: 16,
+    },
+    sosButtonCountdown: { backgroundColor: '#dc2626' },
+    sosButtonActive: { backgroundColor: '#9B1C1C' },
+    sosText: { fontSize: 40, fontWeight: '900', color: '#fff', letterSpacing: -1 },
+    sosSub: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.85)', letterSpacing: 1, marginTop: 2 },
+    sosCountdownNum: { fontSize: 56, fontWeight: '900', color: '#fff' },
+    sosActiveLabel: { fontSize: 13, fontWeight: '700', color: '#fff', marginTop: 4, letterSpacing: 1 },
+    sosHint: { fontSize: 12, color: '#6B21A8', textAlign: 'center', maxWidth: 260 },
+    cancelBtn: {
+      backgroundColor: '#3B0764',
+      paddingHorizontal: 28,
+      paddingVertical: 10,
+      borderRadius: 20,
+    },
+    cancelBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
-  // Grid
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  card: {
-    width: '47%',
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 16,
-    alignItems: 'center',
-    gap: 10,
-    shadowColor: '#3B0764',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#EDE9FE',
-  },
-  cardIcon: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  cardLabel: { fontSize: 13, fontWeight: '700', color: '#1b1c1c', textAlign: 'center' },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    card: {
+      width: '47%',
+      backgroundColor: colors.card,
+      borderRadius: 18,
+      padding: 16,
+      alignItems: 'center',
+      gap: 10,
+      shadowColor: '#3B0764',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.07,
+      shadowRadius: 6,
+      elevation: 3,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    cardIcon: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
+    cardLabel: { fontSize: 13, fontWeight: '700', color: colors.text, textAlign: 'center' },
 
-  // Activity
-  section: { gap: 12 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1b1c1c' },
-  seeAll: { fontSize: 14, color: '#7C3AED', fontWeight: '600' },
-  activityList: { gap: 8 },
-  activityEmpty: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    gap: 8,
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EDE9FE',
-  },
-  activityEmptyText: { fontSize: 13, color: '#9CA3AF', textAlign: 'center' },
-  activityItem: {
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 14,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#EDE9FE',
-  },
-  activityIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  activityTitle: { fontSize: 14, fontWeight: '600', color: '#1b1c1c' },
-  activitySub: { fontSize: 12, color: '#6B7280', marginTop: 1 },
-  activityTime: { fontSize: 12, color: '#9CA3AF' },
+    section: { gap: 12 },
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+    seeAll: { fontSize: 14, color: '#7C3AED', fontWeight: '600' },
+    activityList: { gap: 8 },
+    activityEmpty: {
+      alignItems: 'center',
+      paddingVertical: 20,
+      gap: 8,
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    activityEmptyText: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
+    activityItem: {
+      backgroundColor: colors.card,
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 14,
+      borderRadius: 14,
+      gap: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    activityIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+    activityTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
+    activitySub: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
+    activityTime: { fontSize: 12, color: colors.textMuted },
 
-  // Shake indicator
-  shakeIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'center',
-    backgroundColor: '#EDE9FE',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  shakeIndicatorText: { fontSize: 12, fontWeight: '600', color: '#7C3AED' },
+    shakeIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      alignSelf: 'center',
+      backgroundColor: '#EDE9FE',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+    },
+    shakeIndicatorText: { fontSize: 12, fontWeight: '600', color: '#7C3AED' },
 
-  // Child mode
-  childBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FEF9C3',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 14,
-    alignSelf: 'center',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  childBannerEmoji: { fontSize: 18 },
-  childBannerText: { fontSize: 13, fontWeight: '700', color: '#A16207' },
+    childBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: '#FEF9C3',
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 14,
+      alignSelf: 'center',
+      borderWidth: 1,
+      borderColor: '#FDE68A',
+    },
+    childBannerEmoji: { fontSize: 18 },
+    childBannerText: { fontSize: 13, fontWeight: '700', color: '#A16207' },
 
-  sosRingOuterChild: { width: SOS_SIZE + 90, height: SOS_SIZE + 90, borderRadius: (SOS_SIZE + 90) / 2, top: -15 },
-  sosRingInnerChild: { width: SOS_SIZE + 50, height: SOS_SIZE + 50, borderRadius: (SOS_SIZE + 50) / 2, top: 5 },
-  sosButtonChild: { width: SOS_SIZE + 40, height: SOS_SIZE + 40, borderRadius: (SOS_SIZE + 40) / 2 },
-  sosTextChild: { fontSize: 52, letterSpacing: -1 },
-  sosCountdownNumChild: { fontSize: 72 },
-  sosActiveLabelChild: { fontSize: 16, marginTop: 6 },
-  sosHintChild: { fontSize: 15, fontWeight: '600' },
+    sosRingOuterChild: { width: SOS_SIZE + 90, height: SOS_SIZE + 90, borderRadius: (SOS_SIZE + 90) / 2, top: -15 },
+    sosRingInnerChild: { width: SOS_SIZE + 50, height: SOS_SIZE + 50, borderRadius: (SOS_SIZE + 50) / 2, top: 5 },
+    sosButtonChild: { width: SOS_SIZE + 40, height: SOS_SIZE + 40, borderRadius: (SOS_SIZE + 40) / 2 },
+    sosTextChild: { fontSize: 52, letterSpacing: -1 },
+    sosCountdownNumChild: { fontSize: 72 },
+    sosActiveLabelChild: { fontSize: 16, marginTop: 6 },
+    sosHintChild: { fontSize: 15, fontWeight: '600' },
 
-  gridChild: { gap: 14 },
-  cardChild: { width: '47%', paddingVertical: 22, gap: 12, borderRadius: 22 },
-  cardIconChild: { width: 64, height: 64, borderRadius: 32 },
-  cardLabelChild: { fontSize: 15, fontWeight: '800' },
+    gridChild: { gap: 14 },
+    cardChild: { width: '47%', paddingVertical: 22, gap: 12, borderRadius: 22 },
+    cardIconChild: { width: 64, height: 64, borderRadius: 32 },
+    cardLabelChild: { fontSize: 15, fontWeight: '800' },
 
-  // SOS Overlay
-  sosOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 999,
-  },
-  sosOverlayCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 32,
-    margin: 24,
-    alignItems: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  sosOverlayTitle: { fontSize: 24, fontWeight: '800', color: '#dc2626' },
-  sosOverlayBody: { fontSize: 14, color: '#4B5563', textAlign: 'center', lineHeight: 21, maxWidth: 260 },
-  sosSteps: { gap: 8, alignSelf: 'stretch' },
-  sosStep: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sosStepText: { fontSize: 14, fontWeight: '600', color: '#16a34a' },
-  cancelBtnLarge: {
-    marginTop: 8,
-    backgroundColor: '#3B0764',
-    paddingHorizontal: 36,
-    paddingVertical: 14,
-    borderRadius: 20,
-  },
-});
+    sosOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 999,
+    },
+    sosOverlayCard: {
+      backgroundColor: colors.card,
+      borderRadius: 24,
+      padding: 32,
+      margin: 24,
+      alignItems: 'center',
+      gap: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.25,
+      shadowRadius: 16,
+      elevation: 12,
+    },
+    sosOverlayIconWrap: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: '#16a34a',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
+    sosOverlayTitle: { fontSize: 22, fontWeight: '800', color: colors.text },
+    sosOverlayBody: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, maxWidth: 260 },
+    sosProgressRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    sosProgressStep: { alignItems: 'center', gap: 6, width: 64 },
+    sosProgressDot: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: colors.chipBg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sosProgressDotDone: { backgroundColor: '#E91E8C' },
+    sosProgressLabel: { fontSize: 10, color: colors.textMuted, textAlign: 'center', lineHeight: 14 },
+    sosProgressLabelDone: { color: '#E91E8C', fontWeight: '700' },
+    sosProgressLine: { width: 20, height: 2, backgroundColor: colors.chipBg, marginTop: 16, flexShrink: 1 },
+    sosProgressLineDone: { backgroundColor: '#E91E8C' },
+    cancelBtnLarge: {
+      marginTop: 8,
+      backgroundColor: '#3B0764',
+      paddingHorizontal: 36,
+      paddingVertical: 14,
+      borderRadius: 20,
+    },
+  });
+}

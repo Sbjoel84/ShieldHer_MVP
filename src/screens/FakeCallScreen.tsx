@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { appendLog } from '../utils/activityLog';
+import { useTheme, ThemeColors } from '../theme';
 
 type Phase = 'setup' | 'ringing' | 'active';
 
@@ -21,6 +22,8 @@ interface Props {
 }
 
 export function FakeCallScreen({ onClose }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [phase, setPhase] = useState<Phase>('setup');
   const [callerName, setCallerName] = useState('Mom');
   const [callDuration, setCallDuration] = useState(0);
@@ -96,7 +99,7 @@ export function FakeCallScreen({ onClose }: Props) {
           <MaterialCommunityIcons name="close" size={22} color="#4a4452" />
         </TouchableOpacity>
 
-        <MaterialCommunityIcons name="phone-incoming" size={48} color="#310065" style={{ marginBottom: 8 }} />
+        <MaterialCommunityIcons name="phone-incoming" size={48} color={colors.accentText} style={{ marginBottom: 8 }} />
         <Text style={styles.setupTitle}>Fake Call</Text>
         <Text style={styles.setupSubtitle}>
           Trigger a convincing fake incoming call to escape an uncomfortable situation instantly.
@@ -210,130 +213,132 @@ export function FakeCallScreen({ onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  setupContainer: {
-    flex: 1,
-    backgroundColor: '#fcf9f8',
-    padding: 24,
-    paddingTop: 56,
-  },
-  closeBtn: {
-    position: 'absolute',
-    top: 52,
-    right: 20,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#e5e2e1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  setupTitle: { fontSize: 28, fontWeight: '800', color: '#310065', marginBottom: 8 },
-  setupSubtitle: { fontSize: 15, color: '#4a4452', lineHeight: 22, marginBottom: 28 },
-  label: { fontSize: 13, fontWeight: '700', color: '#1b1c1c', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
-  quickNames: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#cdc3d4',
-    backgroundColor: '#fff',
-  },
-  chipActive: { borderColor: '#310065', backgroundColor: '#eddcff' },
-  chipText: { fontSize: 14, color: '#4a4452', fontWeight: '500' },
-  chipTextActive: { color: '#310065', fontWeight: '700' },
-  input: {
-    borderWidth: 1.5,
-    borderColor: '#cdc3d4',
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-    color: '#1b1c1c',
-    backgroundColor: '#fff',
-    marginBottom: 20,
-  },
-  startBtn: {
-    backgroundColor: '#310065',
-    borderRadius: 16,
-    padding: 17,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 16,
-  },
-  startBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
-  tipBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    backgroundColor: '#eddcff',
-    padding: 14,
-    borderRadius: 12,
-  },
-  tipText: { fontSize: 13, color: '#4a4452', flex: 1, lineHeight: 19 },
-  // Call UI
-  callContainer: {
-    flex: 1,
-    backgroundColor: '#0f0620',
-    alignItems: 'center',
-    paddingTop: 72,
-    paddingBottom: 64,
-  },
-  callStatus: {
-    color: '#a89cab',
-    fontSize: 13,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 36,
-  },
-  callerRing: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(215,186,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  callerAvatar: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    backgroundColor: '#310065',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#d7baff',
-  },
-  callerInitial: { fontSize: 52, fontWeight: '800', color: '#eddcff' },
-  callerName: { fontSize: 30, fontWeight: '700', color: '#fff', marginBottom: 6 },
-  callSubtext: { fontSize: 16, color: '#a89cab', marginBottom: 'auto' as any },
-  callTimer: { fontSize: 20, color: '#cdc3d4', marginBottom: 32, fontVariant: ['tabular-nums'] },
-  ringActions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 72,
-    marginTop: 'auto' as any,
-  },
-  callActionCol: { alignItems: 'center', gap: 10 },
-  callBtn: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  answerBtn: { backgroundColor: '#16a34a' },
-  declineBtn: { backgroundColor: '#dc2626' },
-  callActionLabel: { color: '#fff', fontSize: 13, fontWeight: '500' },
-  activeOptions: {
-    flexDirection: 'row',
-    gap: 36,
-    marginBottom: 16,
-  },
-  callOptionBtn: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionLabel: { color: '#a89cab', fontSize: 12, marginTop: 4 },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    setupContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: 24,
+      paddingTop: 56,
+    },
+    closeBtn: {
+      position: 'absolute',
+      top: 52,
+      right: 20,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.chipBg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    setupTitle: { fontSize: 28, fontWeight: '800', color: colors.accentText, marginBottom: 8 },
+    setupSubtitle: { fontSize: 15, color: colors.textSecondary, lineHeight: 22, marginBottom: 28 },
+    label: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+    quickNames: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+    chip: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1.5,
+      borderColor: colors.chipBorder,
+      backgroundColor: colors.card,
+    },
+    chipActive: { borderColor: '#310065', backgroundColor: '#eddcff' },
+    chipText: { fontSize: 14, color: colors.textSecondary, fontWeight: '500' },
+    chipTextActive: { color: '#310065', fontWeight: '700' },
+    input: {
+      borderWidth: 1.5,
+      borderColor: colors.inputBorder,
+      borderRadius: 12,
+      padding: 14,
+      fontSize: 16,
+      color: colors.text,
+      backgroundColor: colors.inputBg,
+      marginBottom: 20,
+    },
+    startBtn: {
+      backgroundColor: '#310065',
+      borderRadius: 16,
+      padding: 17,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      marginBottom: 16,
+    },
+    startBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
+    tipBox: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+      backgroundColor: '#eddcff',
+      padding: 14,
+      borderRadius: 12,
+    },
+    tipText: { fontSize: 13, color: '#4a4452', flex: 1, lineHeight: 19 },
+    // Call UI — intentionally dark, brand colors unchanged
+    callContainer: {
+      flex: 1,
+      backgroundColor: '#0f0620',
+      alignItems: 'center',
+      paddingTop: 72,
+      paddingBottom: 64,
+    },
+    callStatus: {
+      color: '#a89cab',
+      fontSize: 13,
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      marginBottom: 36,
+    },
+    callerRing: {
+      width: 140,
+      height: 140,
+      borderRadius: 70,
+      backgroundColor: 'rgba(215,186,255,0.15)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 24,
+    },
+    callerAvatar: {
+      width: 112,
+      height: 112,
+      borderRadius: 56,
+      backgroundColor: '#310065',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 3,
+      borderColor: '#d7baff',
+    },
+    callerInitial: { fontSize: 52, fontWeight: '800', color: '#eddcff' },
+    callerName: { fontSize: 30, fontWeight: '700', color: '#fff', marginBottom: 6 },
+    callSubtext: { fontSize: 16, color: '#a89cab', marginBottom: 'auto' as any },
+    callTimer: { fontSize: 20, color: '#cdc3d4', marginBottom: 32, fontVariant: ['tabular-nums'] },
+    ringActions: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 72,
+      marginTop: 'auto' as any,
+    },
+    callActionCol: { alignItems: 'center', gap: 10 },
+    callBtn: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
+    answerBtn: { backgroundColor: '#16a34a' },
+    declineBtn: { backgroundColor: '#dc2626' },
+    callActionLabel: { color: '#fff', fontSize: 13, fontWeight: '500' },
+    activeOptions: {
+      flexDirection: 'row',
+      gap: 36,
+      marginBottom: 16,
+    },
+    callOptionBtn: {
+      width: 58,
+      height: 58,
+      borderRadius: 29,
+      backgroundColor: 'rgba(255,255,255,0.12)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    optionLabel: { color: '#a89cab', fontSize: 12, marginTop: 4 },
+  });
+}

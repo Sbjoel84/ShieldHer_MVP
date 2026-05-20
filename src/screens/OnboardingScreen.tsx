@@ -8,6 +8,7 @@ import {
   Dimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppSettings } from '../context/AppSettingsContext';
@@ -116,7 +117,7 @@ export function OnboardingScreen() {
         style={{ flex: 1 }}
       >
         {SLIDES.map((slide, i) => (
-          <SlideView key={i} slide={slide} />
+          <SlideView key={i} slide={slide} isFirst={i === 0} />
         ))}
       </ScrollView>
 
@@ -161,17 +162,29 @@ export function OnboardingScreen() {
   );
 }
 
-function SlideView({ slide }: { slide: Slide }) {
+function SlideView({ slide, isFirst }: { slide: Slide; isFirst?: boolean }) {
   return (
     <View style={[styles.slide, { width }]}>
       {/* Illustration */}
       <View style={styles.illustrationArea}>
-        <View style={[styles.bigCircle, { backgroundColor: slide.iconBg }]}>
-          <Text style={styles.emoji}>{slide.emoji}</Text>
-        </View>
-        <View style={[styles.iconBadge, { backgroundColor: slide.iconBg, borderColor: slide.iconColor + '33' }]}>
-          <MaterialCommunityIcons name={slide.icon as any} size={36} color={slide.iconColor} />
-        </View>
+        {isFirst ? (
+          <View style={[styles.logoBg, { backgroundColor: slide.iconBg }]}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+        ) : (
+          <>
+            <View style={[styles.bigCircle, { backgroundColor: slide.iconBg }]}>
+              <Text style={styles.emoji}>{slide.emoji}</Text>
+            </View>
+            <View style={[styles.iconBadge, { backgroundColor: slide.iconBg, borderColor: slide.iconColor + '33' }]}>
+              <MaterialCommunityIcons name={slide.icon as any} size={36} color={slide.iconColor} />
+            </View>
+          </>
+        )}
       </View>
 
       {/* Text */}
@@ -215,6 +228,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: 240,
+  },
+  logoBg: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoImage: {
+    width: 160,
+    height: 160,
   },
   bigCircle: {
     width: 200,

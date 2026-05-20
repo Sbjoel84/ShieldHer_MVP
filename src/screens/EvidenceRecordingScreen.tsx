@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,9 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { useTheme, ThemeColors } from '../theme';
 
 interface EvidenceFile {
   uri: string;
@@ -43,6 +44,8 @@ async function loadFiles(): Promise<EvidenceFile[]> {
 
 export function EvidenceRecordingScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [phase, setPhase] = useState<'idle' | 'recording'>('idle');
   const [elapsed, setElapsed] = useState(0);
   const [files, setFiles] = useState<EvidenceFile[]>([]);
@@ -140,7 +143,7 @@ export function EvidenceRecordingScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F9F5FF' }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.headerTitle}>Evidence Recording</Text>
@@ -167,7 +170,7 @@ export function EvidenceRecordingScreen() {
         ) : (
           <View style={styles.recorderIdle}>
             <View style={styles.micIconWrap}>
-              <MaterialCommunityIcons name="microphone" size={36} color="#3B0764" />
+              <MaterialCommunityIcons name="microphone" size={36} color={colors.accentText} />
             </View>
             <Text style={styles.idleTitle}>Start Recording</Text>
             <Text style={styles.idleHint}>
@@ -202,7 +205,7 @@ export function EvidenceRecordingScreen() {
         renderItem={({ item, index }) => (
           <View style={styles.fileCard}>
             <View style={styles.fileIconWrap}>
-              <MaterialCommunityIcons name="shield-lock" size={22} color="#3B0764" />
+              <MaterialCommunityIcons name="shield-lock" size={22} color={colors.accentText} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.fileName}>Recording #{files.length - index}</Text>
@@ -210,7 +213,7 @@ export function EvidenceRecordingScreen() {
             </View>
             <View style={styles.fileActions}>
               <TouchableOpacity style={styles.fileBtn} onPress={() => shareFile(item)}>
-                <MaterialCommunityIcons name="share-variant" size={18} color="#3B0764" />
+                <MaterialCommunityIcons name="share-variant" size={18} color={colors.accentText} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.fileBtn, { backgroundColor: '#fff1f1' }]}
@@ -226,104 +229,106 @@ export function EvidenceRecordingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    backgroundColor: '#1a0d2e',
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: '#fff', marginBottom: 6 },
-  headerSub: { fontSize: 13, color: '#a89cab', lineHeight: 18 },
-  recorderCard: {
-    margin: 16,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  recorderIdle: { alignItems: 'center', gap: 12 },
-  micIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#EDE9FE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  idleTitle: { fontSize: 18, fontWeight: '700', color: '#1b1c1c' },
-  idleHint: { fontSize: 13, color: '#4a4452', textAlign: 'center', lineHeight: 19, maxWidth: 280 },
-  startBtn: {
-    backgroundColor: '#3B0764',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  startBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  recorderActive: { alignItems: 'center', gap: 12 },
-  recIndicator: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  recDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#dc2626' },
-  recLabel: { fontSize: 12, fontWeight: '800', color: '#dc2626', letterSpacing: 2 },
-  recTimer: { fontSize: 48, fontWeight: '800', color: '#1b1c1c', fontVariant: ['tabular-nums'] },
-  recHint: { fontSize: 13, color: '#4a4452', textAlign: 'center' },
-  stopBtn: {
-    backgroundColor: '#dc2626',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  stopBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  listHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-  },
-  listTitle: { fontSize: 16, fontWeight: '700', color: '#1b1c1c' },
-  listCount: { fontSize: 13, color: '#4a4452' },
-  emptyList: { alignItems: 'center', paddingVertical: 32, gap: 10 },
-  emptyText: { fontSize: 14, color: '#7c7483' },
-  fileCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#e5e2e1',
-  },
-  fileIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#EDE9FE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fileName: { fontSize: 15, fontWeight: '600', color: '#1b1c1c' },
-  fileDate: { fontSize: 12, color: '#4a4452', marginTop: 2 },
-  fileActions: { flexDirection: 'row', gap: 6 },
-  fileBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#f0eded',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    header: {
+      backgroundColor: '#1a0d2e',
+      paddingHorizontal: 20,
+      paddingBottom: 24,
+    },
+    headerTitle: { fontSize: 22, fontWeight: '700', color: '#fff', marginBottom: 6 },
+    headerSub: { fontSize: 13, color: '#a89cab', lineHeight: 18 },
+    recorderCard: {
+      margin: 16,
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      padding: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    recorderIdle: { alignItems: 'center', gap: 12 },
+    micIconWrap: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: '#EDE9FE',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    idleTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+    idleHint: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 19, maxWidth: 280 },
+    startBtn: {
+      backgroundColor: '#3B0764',
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 24,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      width: '100%',
+      justifyContent: 'center',
+    },
+    startBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    recorderActive: { alignItems: 'center', gap: 12 },
+    recIndicator: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    recDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#dc2626' },
+    recLabel: { fontSize: 12, fontWeight: '800', color: '#dc2626', letterSpacing: 2 },
+    recTimer: { fontSize: 48, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] },
+    recHint: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
+    stopBtn: {
+      backgroundColor: '#dc2626',
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 24,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      width: '100%',
+      justifyContent: 'center',
+    },
+    stopBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    listHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingBottom: 10,
+    },
+    listTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+    listCount: { fontSize: 13, color: colors.textSecondary },
+    emptyList: { alignItems: 'center', paddingVertical: 32, gap: 10 },
+    emptyText: { fontSize: 14, color: colors.textMuted },
+    fileCard: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    fileIconWrap: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: '#EDE9FE',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    fileName: { fontSize: 15, fontWeight: '600', color: colors.text },
+    fileDate: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+    fileActions: { flexDirection: 'row', gap: 6 },
+    fileBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.chipBg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+}

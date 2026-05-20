@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTheme, ThemeColors } from '../theme';
 
 const PLAN_KEY = '@shieldher_safety_plan_v1';
 
@@ -102,6 +103,8 @@ const DEFAULT_PLAN: PlanSection[] = [
 ];
 
 export function SafetyPlanScreen() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [plan, setPlan] = useState<PlanSection[]>(DEFAULT_PLAN);
   const [expanded, setExpanded] = useState<string | null>('followed');
   const [addingTo, setAddingTo] = useState<string | null>(null);
@@ -255,7 +258,7 @@ export function SafetyPlanScreen() {
                       value={newItemText}
                       onChangeText={setNewItemText}
                       placeholder="Add a step..."
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={colors.textMuted}
                       autoFocus
                       multiline
                       onSubmitEditing={() => addItem(section.id)}
@@ -289,89 +292,94 @@ export function SafetyPlanScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F9F5FF' },
-  content: { padding: 16, gap: 14, paddingBottom: 48 },
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.background },
+    content: { padding: 16, gap: 14, paddingBottom: 48 },
 
-  progressCard: {
-    backgroundColor: '#7C3AED',
-    borderRadius: 20,
-    padding: 20,
-    gap: 12,
-  },
-  progressTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  progressTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
-  progressSub: { fontSize: 13, color: '#DDD6FE', marginTop: 2 },
-  progressCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressPct: { fontSize: 18, fontWeight: '800', color: '#fff' },
-  progressBar: { height: 8, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 4, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#E91E8C', borderRadius: 4 },
-  progressHint: { fontSize: 12, color: '#DDD6FE' },
+    progressCard: {
+      backgroundColor: '#7C3AED',
+      borderRadius: 20,
+      padding: 20,
+      gap: 12,
+    },
+    progressTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    progressTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
+    progressSub: { fontSize: 13, color: '#DDD6FE', marginTop: 2 },
+    progressCircle: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    progressPct: { fontSize: 18, fontWeight: '800', color: '#fff' },
+    progressBar: { height: 8, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 4, overflow: 'hidden' },
+    progressFill: { height: '100%', backgroundColor: '#E91E8C', borderRadius: 4 },
+    progressHint: { fontSize: 12, color: '#DDD6FE' },
 
-  sectionCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#3B0764',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
-  sectionIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  sectionHeaderText: { flex: 1 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1b1c1c' },
-  sectionProgress: { fontSize: 12, marginTop: 2 },
+    sectionCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      overflow: 'hidden',
+      shadowColor: '#3B0764',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+    sectionIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    sectionHeaderText: { flex: 1 },
+    sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+    sectionProgress: { fontSize: 12, marginTop: 2 },
 
-  sectionBody: { borderTopWidth: 1, borderTopColor: '#F3F4F6', padding: 14, gap: 10 },
+    sectionBody: { borderTopWidth: 1, borderTopColor: colors.divider, padding: 14, gap: 10 },
 
-  itemRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  itemText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 20 },
-  itemTextDone: { color: '#9CA3AF', textDecorationLine: 'line-through' },
+    itemRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: colors.chipBorder,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 1,
+    },
+    itemText: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 20 },
+    itemTextDone: { color: colors.textMuted, textDecorationLine: 'line-through' },
 
-  addForm: { gap: 8, marginTop: 4 },
-  addInput: {
-    borderWidth: 1.5,
-    borderColor: '#C4B5FD',
-    borderRadius: 10,
-    padding: 10,
-    fontSize: 13,
-    color: '#1b1c1c',
-    minHeight: 44,
-  },
-  addBtns: { flexDirection: 'row', gap: 8 },
-  addCancel: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1.5, borderColor: '#E5E7EB', alignItems: 'center' },
-  addCancelText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-  addSave: { flex: 2, padding: 10, borderRadius: 8, alignItems: 'center' },
-  addSaveText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+    addForm: { gap: 8, marginTop: 4 },
+    addInput: {
+      borderWidth: 1.5,
+      borderColor: colors.inputBorder,
+      borderRadius: 10,
+      padding: 10,
+      fontSize: 13,
+      color: colors.text,
+      minHeight: 44,
+      backgroundColor: colors.inputBg,
+    },
+    addBtns: { flexDirection: 'row', gap: 8 },
+    addCancel: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1.5, borderColor: colors.chipBorder, alignItems: 'center' },
+    addCancelText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    addSave: { flex: 2, padding: 10, borderRadius: 8, alignItems: 'center' },
+    addSaveText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
-  addBtnText: { fontSize: 13, fontWeight: '600', color: '#7C3AED' },
+    addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
+    addBtnText: { fontSize: 13, fontWeight: '600', color: '#7C3AED' },
 
-  resetBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-  },
-  resetBtnText: { fontSize: 13, color: '#9CA3AF' },
-});
+    resetBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 12,
+    },
+    resetBtnText: { fontSize: 13, color: colors.textMuted },
+  });
+}

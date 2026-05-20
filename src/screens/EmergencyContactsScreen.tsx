@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SMS from 'expo-sms';
 import * as Location from 'expo-location';
 import { useContacts, RELATIONSHIPS } from '../context/ContactsContext';
+import { useTheme, ThemeColors } from '../theme';
 
 const REL_COLORS: Record<string, { bg: string; text: string }> = {
   Mom:         { bg: '#fce7f3', text: '#9d174d' },
@@ -35,6 +36,8 @@ function relColor(rel?: string) {
 export function EmergencyContactsScreen() {
   const { contacts, addContact, removeContact } = useContacts();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [showForm, setShowForm] = useState(contacts.length === 0);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -92,17 +95,23 @@ export function EmergencyContactsScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fcf9f8' }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.headerTitle}>Trusted Circle</Text>
+            <Text style={styles.headerTitle}>Trusted Contacts</Text>
             <Text style={styles.headerSub}>
-              {contacts.length} person{contacts.length !== 1 ? 's' : ''} watching over you
+              {contacts.length} contact{contacts.length !== 1 ? 's' : ''} in your circle
             </Text>
           </View>
-          <MaterialCommunityIcons name="account-group" size={36} color="rgba(255,255,255,0.3)" />
+          <TouchableOpacity
+            style={styles.headerAddBtn}
+            onPress={() => setShowForm(f => !f)}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons name={showForm ? 'close' : 'plus'} size={22} color="#fff" />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity
@@ -111,7 +120,7 @@ export function EmergencyContactsScreen() {
           disabled={broadcasting}
           activeOpacity={0.85}
         >
-          <MaterialCommunityIcons name="check-circle" size={20} color="#310065" />
+          <MaterialCommunityIcons name="check-circle" size={20} color={colors.accentText} />
           <Text style={styles.broadcastBtnText}>
             {broadcasting ? 'Sending...' : "Broadcast: I'm Safe"}
           </Text>
@@ -150,14 +159,14 @@ export function EmergencyContactsScreen() {
                 <Text style={styles.cardPhone}>{item.phone}</Text>
                 <View style={styles.cardActions}>
                   <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(`tel:${item.phone}`)}>
-                    <MaterialCommunityIcons name="phone" size={15} color="#310065" />
+                    <MaterialCommunityIcons name="phone" size={15} color={colors.accentText} />
                     <Text style={styles.actionBtnText}>Call</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.actionBtn} onPress={async () => {
                     const isAvail = await SMS.isAvailableAsync();
                     if (isAvail) await SMS.sendSMSAsync([item.phone], `Hi ${item.name}, checking in 💜 — ShieldHer`);
                   }}>
-                    <MaterialCommunityIcons name="message-text-outline" size={15} color="#310065" />
+                    <MaterialCommunityIcons name="message-text-outline" size={15} color={colors.accentText} />
                     <Text style={styles.actionBtnText}>SMS</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.actionBtn} onPress={() => shareLocationWith(item.phone, item.name)}>
@@ -210,7 +219,7 @@ export function EmergencyContactsScreen() {
             </View>
           ) : (
             <TouchableOpacity style={styles.addBtn} onPress={() => setShowForm(true)}>
-              <MaterialCommunityIcons name="plus-circle-outline" size={22} color="#310065" />
+              <MaterialCommunityIcons name="plus-circle-outline" size={22} color={colors.accentText} />
               <Text style={styles.addBtnText}>Add Person to Circle</Text>
             </TouchableOpacity>
           )
@@ -220,91 +229,101 @@ export function EmergencyContactsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  header: { backgroundColor: '#310065', padding: 20, gap: 14 },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },
-  headerSub: { fontSize: 13, color: '#d7baff', marginTop: 2 },
-  broadcastBtn: {
-    backgroundColor: '#eddcff',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  broadcastBtnText: { color: '#310065', fontWeight: '700', fontSize: 15 },
-  empty: { alignItems: 'center', paddingVertical: 48, gap: 12, paddingHorizontal: 24 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1b1c1c' },
-  emptyBody: { fontSize: 14, color: '#4a4452', textAlign: 'center', lineHeight: 21 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    flexDirection: 'row',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#eddcff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarLetter: { fontSize: 22, fontWeight: '800', color: '#310065' },
-  cardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
-  cardName: { fontSize: 16, fontWeight: '700', color: '#1b1c1c' },
-  relBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  relText: { fontSize: 11, fontWeight: '700' },
-  cardPhone: { fontSize: 13, color: '#4a4452', marginBottom: 10 },
-  cardActions: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#f0eded',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  actionBtnText: { fontSize: 12, fontWeight: '600', color: '#310065' },
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, padding: 16, borderRadius: 14,
-    borderWidth: 2, borderColor: '#310065', borderStyle: 'dashed', marginTop: 4,
-  },
-  addBtnText: { color: '#310065', fontSize: 15, fontWeight: '600' },
-  form: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 20, gap: 12, marginTop: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
-  },
-  formTitle: { fontSize: 16, fontWeight: '700', color: '#1b1c1c' },
-  input: {
-    borderWidth: 1.5, borderColor: '#cdc3d4', borderRadius: 10,
-    padding: 13, fontSize: 15, color: '#1b1c1c', backgroundColor: '#fcf9f8',
-  },
-  relLabel: { fontSize: 12, fontWeight: '700', color: '#4a4452', textTransform: 'uppercase', letterSpacing: 0.5 },
-  relChip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16,
-    borderWidth: 1.5, borderColor: '#cdc3d4', backgroundColor: '#fff',
-  },
-  relChipActive: { borderColor: '#310065', backgroundColor: '#eddcff' },
-  relChipText: { fontSize: 13, color: '#4a4452', fontWeight: '500' },
-  relChipTextActive: { color: '#310065', fontWeight: '700' },
-  formBtns: { flexDirection: 'row', gap: 10 },
-  cancelBtn: {
-    flex: 1, padding: 12, borderRadius: 10, borderWidth: 1.5,
-    borderColor: '#cdc3d4', alignItems: 'center',
-  },
-  cancelBtnText: { color: '#4a4452', fontWeight: '600', fontSize: 14 },
-  saveBtn: { flex: 2, padding: 12, borderRadius: 10, backgroundColor: '#310065', alignItems: 'center' },
-  saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    header: { backgroundColor: '#310065', padding: 20, gap: 14 },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    headerTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },
+    headerSub: { fontSize: 13, color: '#d7baff', marginTop: 2 },
+    headerAddBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    broadcastBtn: {
+      backgroundColor: '#eddcff',
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 18,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    broadcastBtnText: { color: colors.accentText, fontWeight: '700', fontSize: 15 },
+    empty: { alignItems: 'center', paddingVertical: 48, gap: 12, paddingHorizontal: 24 },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+    emptyBody: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 21 },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 14,
+      flexDirection: 'row',
+      gap: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    avatar: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: '#eddcff',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarLetter: { fontSize: 22, fontWeight: '800', color: colors.accentText },
+    cardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+    cardName: { fontSize: 16, fontWeight: '700', color: colors.text },
+    relBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+    relText: { fontSize: 11, fontWeight: '700' },
+    cardPhone: { fontSize: 13, color: colors.textSecondary, marginBottom: 10 },
+    cardActions: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+    actionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.chipBg,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 10,
+    },
+    actionBtnText: { fontSize: 12, fontWeight: '600', color: colors.accentText },
+    addBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 8, padding: 16, borderRadius: 14,
+      borderWidth: 2, borderColor: '#310065', borderStyle: 'dashed', marginTop: 4,
+    },
+    addBtnText: { color: colors.accentText, fontSize: 15, fontWeight: '600' },
+    form: {
+      backgroundColor: colors.card, borderRadius: 16, padding: 20, gap: 12, marginTop: 4,
+      shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    },
+    formTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+    input: {
+      borderWidth: 1.5, borderColor: colors.inputBorder, borderRadius: 10,
+      padding: 13, fontSize: 15, color: colors.text, backgroundColor: colors.inputBg,
+    },
+    relLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
+    relChip: {
+      paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16,
+      borderWidth: 1.5, borderColor: colors.chipBorder, backgroundColor: colors.card,
+    },
+    relChipActive: { borderColor: '#310065', backgroundColor: '#eddcff' },
+    relChipText: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
+    relChipTextActive: { color: '#310065', fontWeight: '700' },
+    formBtns: { flexDirection: 'row', gap: 10 },
+    cancelBtn: {
+      flex: 1, padding: 12, borderRadius: 10, borderWidth: 1.5,
+      borderColor: colors.chipBorder, alignItems: 'center',
+    },
+    cancelBtnText: { color: colors.textSecondary, fontWeight: '600', fontSize: 14 },
+    saveBtn: { flex: 2, padding: 12, borderRadius: 10, backgroundColor: '#310065', alignItems: 'center' },
+    saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  });
+}

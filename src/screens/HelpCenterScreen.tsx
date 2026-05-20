@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme, ThemeColors } from '../theme';
 
 interface FAQ {
   q: string;
@@ -129,12 +130,14 @@ const HOTLINES = [
 ];
 
 function FAQItem({ faq, isLast }: { faq: FAQ; isLast: boolean }) {
+  const { colors } = useTheme();
+  const f = useMemo(() => makeStyles(colors), [colors]);
   const [open, setOpen] = useState(false);
   return (
     <View style={[f.item, !isLast && f.itemBorder]}>
       <TouchableOpacity style={f.question} onPress={() => setOpen(v => !v)} activeOpacity={0.75}>
         <Text style={f.questionText}>{faq.q}</Text>
-        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={18} color="#9CA3AF" />
+        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
       </TouchableOpacity>
       {open && <Text style={f.answer}>{faq.a}</Text>}
     </View>
@@ -142,6 +145,8 @@ function FAQItem({ faq, isLast }: { faq: FAQ; isLast: boolean }) {
 }
 
 function SectionCard({ section }: { section: FAQSection }) {
+  const { colors } = useTheme();
+  const f = useMemo(() => makeStyles(colors), [colors]);
   const [open, setOpen] = useState(false);
   return (
     <View style={f.sectionCard}>
@@ -170,6 +175,8 @@ function callHotline(number: string) {
 }
 
 export function HelpCenterScreen() {
+  const { colors } = useTheme();
+  const f = useMemo(() => makeStyles(colors), [colors]);
   return (
     <ScrollView style={f.root} contentContainerStyle={f.content}>
       {/* Header banner */}
@@ -234,82 +241,88 @@ export function HelpCenterScreen() {
   );
 }
 
-const f = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F9F5FF' },
-  content: { padding: 16, gap: 20, paddingBottom: 48 },
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.background },
+    content: { padding: 16, gap: 20, paddingBottom: 48 },
 
-  banner: {
-    backgroundColor: '#7C3AED',
-    borderRadius: 20,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  bannerTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
-  bannerSub: { fontSize: 13, color: '#DDD6FE', marginTop: 2 },
+    banner: {
+      backgroundColor: '#7C3AED',
+      borderRadius: 20,
+      padding: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+    },
+    bannerTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
+    bannerSub: { fontSize: 13, color: '#DDD6FE', marginTop: 2 },
 
-  section: { gap: 10 },
-  sectionLabel: { fontSize: 15, fontWeight: '700', color: '#7C3AED' },
+    section: { gap: 10 },
+    sectionLabel: { fontSize: 15, fontWeight: '700', color: '#7C3AED' },
 
-  hotlineCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#3B0764',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  divider: { height: 1, backgroundColor: '#F3F4F6', marginHorizontal: 16 },
-  hotlineRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
-  hotlineIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  hotlineText: { flex: 1 },
-  hotlineLabel: { fontSize: 13, fontWeight: '700', color: '#1b1c1c' },
-  hotlineNumber: { fontSize: 15, fontWeight: '800', marginTop: 2 },
+    hotlineCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      overflow: 'hidden',
+      shadowColor: '#3B0764',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    divider: { height: 1, backgroundColor: colors.divider, marginHorizontal: 16 },
+    hotlineRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+    hotlineIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    hotlineText: { flex: 1 },
+    hotlineLabel: { fontSize: 13, fontWeight: '700', color: colors.text },
+    hotlineNumber: { fontSize: 15, fontWeight: '800', marginTop: 2 },
 
-  sectionCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 8,
-    shadowColor: '#3B0764',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 1,
-  },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
-  sectionIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  sectionTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: '#1b1c1c' },
+    sectionCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      overflow: 'hidden',
+      marginBottom: 8,
+      shadowColor: '#3B0764',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 5,
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+    sectionIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    sectionTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.text },
 
-  faqList: { borderTopWidth: 1, borderTopColor: '#F3F4F6' },
-  item: { paddingHorizontal: 16, paddingVertical: 12 },
-  itemBorder: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  question: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  questionText: { flex: 1, fontSize: 13, fontWeight: '600', color: '#374151', lineHeight: 20 },
-  answer: { fontSize: 13, color: '#6B7280', lineHeight: 20, marginTop: 8 },
+    faqList: { borderTopWidth: 1, borderTopColor: colors.divider },
+    item: { paddingHorizontal: 16, paddingVertical: 12 },
+    itemBorder: { borderBottomWidth: 1, borderBottomColor: colors.divider },
+    question: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+    questionText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.text, lineHeight: 20 },
+    answer: { fontSize: 13, color: colors.textSecondary, lineHeight: 20, marginTop: 8 },
 
-  supportCard: {
-    backgroundColor: '#EDE9FE',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#C4B5FD',
-  },
-  supportTitle: { fontSize: 15, fontWeight: '700', color: '#1b1c1c' },
-  supportSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  supportBtn: {
-    backgroundColor: '#7C3AED',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  supportBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+    supportCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    supportTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+    supportSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+    supportBtn: {
+      backgroundColor: '#7C3AED',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
+    },
+    supportBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
-  version: { textAlign: 'center', fontSize: 12, color: '#9CA3AF' },
-});
+    version: { textAlign: 'center', fontSize: 12, color: colors.textMuted },
+  });
+}

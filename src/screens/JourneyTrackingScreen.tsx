@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import * as SMS from 'expo-sms';
 import * as Haptics from 'expo-haptics';
 import { useContacts } from '../context/ContactsContext';
 import { appendLog } from '../utils/activityLog';
+import { useTheme, ThemeColors } from '../theme';
 
 type Phase = 'setup' | 'active' | 'alert';
 
@@ -23,6 +24,8 @@ const DURATIONS = [15, 30, 45, 60, 90];
 export function JourneyTrackingScreen() {
   const { contacts } = useContacts();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [phase, setPhase] = useState<Phase>('setup');
   const [destination, setDestination] = useState('');
   const [durationMin, setDurationMin] = useState(30);
@@ -152,7 +155,7 @@ export function JourneyTrackingScreen() {
     const isUrgent = remaining < 60;
 
     return (
-      <ScrollView style={{ flex: 1, backgroundColor: '#fcf9f8' }}>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={[styles.activeHeader, isUrgent && { backgroundColor: '#dc2626' }, { paddingTop: insets.top + 20 }]}>
           <View style={styles.activeBadge}>
             <View style={[styles.activeDot, isUrgent && { backgroundColor: '#fca5a5' }]} />
@@ -190,7 +193,7 @@ export function JourneyTrackingScreen() {
 
   // Setup phase
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#fcf9f8' }} contentContainerStyle={{ padding: 20, paddingTop: insets.top + 20 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20, paddingTop: insets.top + 20 }}>
       <Text style={styles.setupTitle}>Safe Walk</Text>
       <Text style={styles.setupSubtitle}>
         Share your journey with trusted contacts. If you don't check in on time, they'll be automatically alerted with your location.
@@ -260,125 +263,127 @@ export function JourneyTrackingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  setupTitle: { fontSize: 28, fontWeight: '800', color: '#310065', marginBottom: 8 },
-  setupSubtitle: { fontSize: 15, color: '#4a4452', lineHeight: 22, marginBottom: 28 },
-  fieldLabel: { fontSize: 13, fontWeight: '700', color: '#1b1c1c', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input: {
-    borderWidth: 1.5,
-    borderColor: '#cdc3d4',
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-    color: '#1b1c1c',
-    backgroundColor: '#fff',
-    marginBottom: 24,
-  },
-  durationRow: { flexDirection: 'row', gap: 8, marginBottom: 24, flexWrap: 'wrap' },
-  durationChip: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#cdc3d4',
-    backgroundColor: '#fff',
-  },
-  durationChipActive: { borderColor: '#310065', backgroundColor: '#eddcff' },
-  durationText: { fontSize: 14, color: '#4a4452', fontWeight: '500' },
-  durationTextActive: { color: '#310065', fontWeight: '700' },
-  contactsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#f0eded',
-    borderWidth: 1.5,
-    borderColor: '#cdc3d4',
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 24,
-  },
-  contactsText: { fontSize: 14, color: '#4a4452', flex: 1 },
-  startBtn: {
-    backgroundColor: '#310065',
-    borderRadius: 16,
-    padding: 17,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 24,
-  },
-  startBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
-  howItWorksBox: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#e5e2e1',
-  },
-  howItWorksTitle: { fontSize: 14, fontWeight: '700', color: '#1b1c1c', marginBottom: 4 },
-  howItWorksRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  howItWorksText: { fontSize: 13, color: '#4a4452', flex: 1 },
-  // Active phase
-  activeHeader: {
-    backgroundColor: '#310065',
-    padding: 24,
-    paddingBottom: 28,
-    gap: 6,
-  },
-  activeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ade80' },
-  activeBadgeText: { color: '#d7baff', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
-  activeDestText: { color: '#fff', fontSize: 22, fontWeight: '700' },
-  activeContactsText: { color: '#d7baff', fontSize: 13 },
-  timerCard: {
-    margin: 16,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  timerLabel: { fontSize: 12, color: '#4a4452', textTransform: 'uppercase', letterSpacing: 1, fontWeight: '600' },
-  timerValue: { fontSize: 56, fontWeight: '800', color: '#310065', fontVariant: ['tabular-nums'] },
-  progressTrack: { width: '100%', height: 6, backgroundColor: '#eddcff', borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#310065', borderRadius: 3 },
-  elapsedText: { fontSize: 13, color: '#7c7483' },
-  activeActions: { paddingHorizontal: 16, gap: 10 },
-  safeBtn: {
-    backgroundColor: '#16a34a',
-    borderRadius: 16,
-    padding: 17,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  safeBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
-  safeHint: { textAlign: 'center', fontSize: 13, color: '#4a4452', lineHeight: 19 },
-  // Alert phase
-  alertContainer: {
-    flex: 1,
-    backgroundColor: '#fff1f1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 28,
-    gap: 16,
-  },
-  alertTitle: { fontSize: 28, fontWeight: '800', color: '#dc2626', textAlign: 'center' },
-  alertBody: { fontSize: 15, color: '#4a4452', textAlign: 'center', lineHeight: 22, maxWidth: 280 },
-  sosBorderBtn: {
-    borderWidth: 2,
-    borderColor: '#dc2626',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-  },
-  sosBorderBtnText: { color: '#dc2626', fontSize: 16, fontWeight: '700' },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    setupTitle: { fontSize: 28, fontWeight: '800', color: colors.accentText, marginBottom: 8 },
+    setupSubtitle: { fontSize: 15, color: colors.textSecondary, lineHeight: 22, marginBottom: 28 },
+    fieldLabel: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+    input: {
+      borderWidth: 1.5,
+      borderColor: colors.inputBorder,
+      borderRadius: 12,
+      padding: 14,
+      fontSize: 16,
+      color: colors.text,
+      backgroundColor: colors.inputBg,
+      marginBottom: 24,
+    },
+    durationRow: { flexDirection: 'row', gap: 8, marginBottom: 24, flexWrap: 'wrap' },
+    durationChip: {
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 20,
+      borderWidth: 1.5,
+      borderColor: colors.chipBorder,
+      backgroundColor: colors.card,
+    },
+    durationChipActive: { borderColor: '#310065', backgroundColor: '#eddcff' },
+    durationText: { fontSize: 14, color: colors.textSecondary, fontWeight: '500' },
+    durationTextActive: { color: '#310065', fontWeight: '700' },
+    contactsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.chipBg,
+      borderWidth: 1.5,
+      borderColor: colors.chipBorder,
+      padding: 14,
+      borderRadius: 12,
+      marginBottom: 24,
+    },
+    contactsText: { fontSize: 14, color: colors.textSecondary, flex: 1 },
+    startBtn: {
+      backgroundColor: '#310065',
+      borderRadius: 16,
+      padding: 17,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      marginBottom: 24,
+    },
+    startBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
+    howItWorksBox: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      padding: 16,
+      gap: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    howItWorksTitle: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 4 },
+    howItWorksRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    howItWorksText: { fontSize: 13, color: colors.textSecondary, flex: 1 },
+    // Active phase
+    activeHeader: {
+      backgroundColor: '#310065',
+      padding: 24,
+      paddingBottom: 28,
+      gap: 6,
+    },
+    activeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ade80' },
+    activeBadgeText: { color: '#d7baff', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+    activeDestText: { color: '#fff', fontSize: 22, fontWeight: '700' },
+    activeContactsText: { color: '#d7baff', fontSize: 13 },
+    timerCard: {
+      margin: 16,
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      padding: 24,
+      alignItems: 'center',
+      gap: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    timerLabel: { fontSize: 12, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 1, fontWeight: '600' },
+    timerValue: { fontSize: 56, fontWeight: '800', color: colors.accentText, fontVariant: ['tabular-nums'] },
+    progressTrack: { width: '100%', height: 6, backgroundColor: '#eddcff', borderRadius: 3, overflow: 'hidden' },
+    progressFill: { height: '100%', backgroundColor: '#310065', borderRadius: 3 },
+    elapsedText: { fontSize: 13, color: colors.textMuted },
+    activeActions: { paddingHorizontal: 16, gap: 10 },
+    safeBtn: {
+      backgroundColor: '#16a34a',
+      borderRadius: 16,
+      padding: 17,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+    },
+    safeBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
+    safeHint: { textAlign: 'center', fontSize: 13, color: colors.textSecondary, lineHeight: 19 },
+    // Alert phase
+    alertContainer: {
+      flex: 1,
+      backgroundColor: '#fff1f1',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 28,
+      gap: 16,
+    },
+    alertTitle: { fontSize: 28, fontWeight: '800', color: '#dc2626', textAlign: 'center' },
+    alertBody: { fontSize: 15, color: '#4a4452', textAlign: 'center', lineHeight: 22, maxWidth: 280 },
+    sosBorderBtn: {
+      borderWidth: 2,
+      borderColor: '#dc2626',
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 32,
+    },
+    sosBorderBtnText: { color: '#dc2626', fontSize: 16, fontWeight: '700' },
+  });
+}

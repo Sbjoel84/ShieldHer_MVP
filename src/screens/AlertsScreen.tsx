@@ -1,15 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   RefreshControl,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { readLog, LogEntry, LogType } from '../utils/activityLog';
+import { useTheme, ThemeColors } from '../theme';
 
 const TYPE_META: Record<LogType, { icon: string; color: string; bg: string }> = {
   sos:         { icon: 'alarm-light',          color: '#DC2626', bg: '#FEE2E2' },
@@ -53,7 +53,7 @@ function timeAgo(ms: number): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function AlertItem({ entry }: { entry: LogEntry }) {
+function AlertItem({ entry, s }: { entry: LogEntry; s: ReturnType<typeof makeStyles> }) {
   const meta = TYPE_META[entry.type];
   return (
     <View style={s.alertItem}>
@@ -70,6 +70,8 @@ function AlertItem({ entry }: { entry: LogEntry }) {
 }
 
 export function AlertsScreen() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -119,7 +121,7 @@ export function AlertsScreen() {
             {sosAlerts.map((e, i) => (
               <React.Fragment key={e.id}>
                 {i > 0 && <View style={s.divider} />}
-                <AlertItem entry={e} />
+                <AlertItem entry={e} s={s} />
               </React.Fragment>
             ))}
           </View>
@@ -137,7 +139,7 @@ export function AlertsScreen() {
             {recentActivity.slice(0, 5).map((e, i) => (
               <React.Fragment key={e.id}>
                 {i > 0 && <View style={s.divider} />}
-                <AlertItem entry={e} />
+                <AlertItem entry={e} s={s} />
               </React.Fragment>
             ))}
           </View>
@@ -166,69 +168,75 @@ export function AlertsScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F9F5FF' },
-  content: { padding: 16, gap: 20, paddingBottom: 48 },
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.background },
+    content: { padding: 16, gap: 20, paddingBottom: 48 },
 
-  header: { paddingTop: 8, gap: 2 },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#1b1c1c' },
-  headerSub: { fontSize: 14, color: '#6B7280' },
+    header: { paddingTop: 8, gap: 2 },
+    headerTitle: { fontSize: 28, fontWeight: '800', color: colors.text },
+    headerSub: { fontSize: 14, color: colors.textSecondary },
 
-  section: { gap: 10 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#7C3AED' },
+    section: { gap: 10 },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    sectionTitle: { fontSize: 15, fontWeight: '700', color: '#7C3AED' },
 
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#3B0764',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  divider: { height: 1, backgroundColor: '#F3F4F6', marginHorizontal: 16 },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      overflow: 'hidden',
+      shadowColor: '#3B0764',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    divider: { height: 1, backgroundColor: colors.divider, marginHorizontal: 16 },
 
-  alertItem: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
-  alertIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  alertBody: { flex: 1, gap: 2 },
-  alertTitle: { fontSize: 14, fontWeight: '700', color: '#1b1c1c' },
-  alertDetail: { fontSize: 12, color: '#6B7280', lineHeight: 16 },
-  alertTime: { fontSize: 11, color: '#9CA3AF', minWidth: 48, textAlign: 'right' },
+    alertItem: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+    alertIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    alertBody: { flex: 1, gap: 2 },
+    alertTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+    alertDetail: { fontSize: 12, color: colors.textSecondary, lineHeight: 16 },
+    alertTime: { fontSize: 11, color: colors.textMuted, minWidth: 48, textAlign: 'right' },
 
-  emptyCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 32,
-    alignItems: 'center',
-    gap: 8,
-    shadowColor: '#3B0764',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#1b1c1c' },
-  emptySub: { fontSize: 13, color: '#6B7280', textAlign: 'center' },
+    emptyCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 32,
+      alignItems: 'center',
+      gap: 8,
+      shadowColor: '#3B0764',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    emptyTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
+    emptySub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
 
-  reminderCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    shadowColor: '#3B0764',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-    borderWidth: 1,
-    borderColor: '#EDE9FE',
-  },
-  reminderIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  reminderBody: { flex: 1, gap: 4 },
-  reminderTitle: { fontSize: 14, fontWeight: '700', color: '#1b1c1c' },
-  reminderText: { fontSize: 12, color: '#6B7280', lineHeight: 18 },
-});
+    reminderCard: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+      shadowColor: '#3B0764',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    reminderIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    reminderBody: { flex: 1, gap: 4 },
+    reminderTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+    reminderText: { fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+  });
+}

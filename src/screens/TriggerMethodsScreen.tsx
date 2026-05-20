@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useNavigation } from '@react-navigation/native';
+import { useTheme, ThemeColors } from '../theme';
 
 interface Method {
   id: string;
@@ -20,6 +22,7 @@ interface Method {
   steps: string[];
   available: boolean;
   badge?: string;
+  route?: string;
 }
 
 const METHODS: Method[] = [
@@ -80,6 +83,7 @@ const METHODS: Method[] = [
     subtitle: 'Press Vol Up → Vol Down → Vol Up',
     badge: 'Coming Soon',
     available: false,
+    route: 'Volume Button',
     steps: [
       'Will allow triggering SOS by pressing: Volume Up, Volume Down, Volume Up in sequence.',
       'Activatable from lock screen or while the phone is in your pocket.',
@@ -96,6 +100,7 @@ const METHODS: Method[] = [
     subtitle: 'Press power button rapidly 5 times',
     badge: 'Coming Soon',
     available: false,
+    route: 'Power Button',
     steps: [
       'Will trigger SOS when you press the power button 5 times quickly.',
       'Works from any app, lock screen, or pocket.',
@@ -112,6 +117,7 @@ const METHODS: Method[] = [
     subtitle: 'Say your secret word to trigger SOS',
     badge: 'Coming Soon',
     available: false,
+    route: 'Voice Safe-Word',
     steps: [
       'Set a custom safe-word (e.g. "Pineapple", "Code Red").',
       'ShieldHer listens in the background only when enabled.',
@@ -122,7 +128,10 @@ const METHODS: Method[] = [
 ];
 
 function MethodCard({ method }: { method: Method }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [expanded, setExpanded] = useState(false);
+  const navigation = useNavigation<any>();
 
   return (
     <View style={[styles.card, !method.available && styles.cardDisabled]}>
@@ -176,6 +185,16 @@ function MethodCard({ method }: { method: Method }) {
               <Text style={[styles.stepText, !method.available && styles.textDim]}>{step}</Text>
             </View>
           ))}
+          {method.route && (
+            <TouchableOpacity
+              style={[styles.detailsBtn, { borderColor: method.iconColor }]}
+              onPress={() => navigation.navigate(method.route!)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.detailsBtnText, { color: method.iconColor }]}>View Full Details</Text>
+              <MaterialCommunityIcons name="arrow-right" size={16} color={method.iconColor} />
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -183,6 +202,9 @@ function MethodCard({ method }: { method: Method }) {
 }
 
 export function TriggerMethodsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   function testShake() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     Alert.alert(
@@ -233,117 +255,131 @@ export function TriggerMethodsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F9F5FF' },
-  content: { padding: 16, gap: 14, paddingBottom: 40 },
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.background },
+    content: { padding: 16, gap: 14, paddingBottom: 40 },
 
-  heroBanner: {
-    backgroundColor: '#3B0764',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    gap: 10,
-  },
-  heroTitle: { fontSize: 22, fontWeight: '800', color: '#fff', textAlign: 'center' },
-  heroSub: { fontSize: 14, color: '#C4B5FD', textAlign: 'center', lineHeight: 20 },
+    heroBanner: {
+      backgroundColor: '#3B0764',
+      borderRadius: 20,
+      padding: 24,
+      alignItems: 'center',
+      gap: 10,
+    },
+    heroTitle: { fontSize: 22, fontWeight: '800', color: '#fff', textAlign: 'center' },
+    heroSub: { fontSize: 14, color: '#C4B5FD', textAlign: 'center', lineHeight: 20 },
 
-  infoBox: {
-    backgroundColor: '#EDE9FE',
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'flex-start',
-  },
-  infoText: { flex: 1, fontSize: 13, color: '#4C1D95', lineHeight: 19 },
+    infoBox: {
+      backgroundColor: '#EDE9FE',
+      borderRadius: 14,
+      padding: 14,
+      flexDirection: 'row',
+      gap: 10,
+      alignItems: 'flex-start',
+    },
+    infoText: { flex: 1, fontSize: 13, color: '#4C1D95', lineHeight: 19 },
 
-  testBtn: {
-    backgroundColor: '#7C3AED',
-    borderRadius: 14,
-    padding: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  testBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    testBtn: {
+      backgroundColor: '#7C3AED',
+      borderRadius: 14,
+      padding: 15,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    testBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#6B7280',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginTop: 4,
-  },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+      marginTop: 4,
+    },
 
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#EDE9FE',
-    shadowColor: '#3B0764',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardDisabled: { opacity: 0.65 },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 12,
-  },
-  iconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  methodTitle: { fontSize: 15, fontWeight: '700', color: '#1b1c1c' },
-  methodSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  textDim: { color: '#9CA3AF' },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      shadowColor: '#3B0764',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    cardDisabled: { opacity: 0.65 },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      gap: 12,
+    },
+    iconWrap: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+    methodTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+    methodSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+    textDim: { color: colors.textMuted },
 
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  badgeActive: { backgroundColor: '#DCFCE7' },
-  badgeSoon: { backgroundColor: '#F3F4F6' },
-  badgeText: { fontSize: 11, fontWeight: '700' },
-  badgeTextActive: { color: '#16a34a' },
-  badgeTextSoon: { color: '#6B7280' },
+    badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+    badgeActive: { backgroundColor: '#DCFCE7' },
+    badgeSoon: { backgroundColor: colors.chipBg },
+    badgeText: { fontSize: 11, fontWeight: '700' },
+    badgeTextActive: { color: '#16a34a' },
+    badgeTextSoon: { color: colors.textSecondary },
 
-  cardBody: {
-    padding: 16,
-    paddingTop: 4,
-    gap: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  stepRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  stepNum: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  stepNumText: { fontSize: 12, fontWeight: '800' },
-  stepText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 20 },
+    cardBody: {
+      padding: 16,
+      paddingTop: 4,
+      gap: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.divider,
+    },
+    stepRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+    stepNum: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+      marginTop: 1,
+    },
+    stepNumText: { fontSize: 12, fontWeight: '800' },
+    stepText: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 20 },
 
-  warningBox: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: 12,
-    padding: 14,
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  warningText: { flex: 1, fontSize: 13, color: '#92400E', lineHeight: 19 },
-});
+    detailsBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      borderWidth: 1.5,
+      borderRadius: 10,
+      paddingVertical: 10,
+      marginTop: 4,
+    },
+    detailsBtnText: { fontSize: 13, fontWeight: '700' },
+
+    warningBox: {
+      backgroundColor: '#FFFBEB',
+      borderRadius: 12,
+      padding: 14,
+      flexDirection: 'row',
+      gap: 10,
+      alignItems: 'flex-start',
+      borderWidth: 1,
+      borderColor: '#FDE68A',
+    },
+    warningText: { flex: 1, fontSize: 13, color: '#92400E', lineHeight: 19 },
+  });
+}

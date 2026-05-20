@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
+import { useTheme, ThemeColors } from '../theme';
 
 const STORAGE_KEY = '@shieldher_unsafe_areas_v1';
 const PROXIMITY_KM = 0.5; // warn if within 500m
@@ -63,6 +64,8 @@ function timeAgo(ts: number): string {
 
 export function UnsafeAreaScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [areas, setAreas] = useState<UnsafeArea[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [description, setDescription] = useState('');
@@ -151,7 +154,7 @@ export function UnsafeAreaScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F9F5FF' }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={styles.headerTop}>
@@ -198,7 +201,7 @@ export function UnsafeAreaScreen() {
       {tab === 'map' ? (
         <ScrollView contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }}>
           <View style={styles.howCard}>
-            <MaterialCommunityIcons name="map-marker-alert" size={40} color="#3B0764" />
+            <MaterialCommunityIcons name="map-marker-alert" size={40} color={colors.accentText} />
             <Text style={styles.howTitle}>Community-Powered Safety</Text>
             <Text style={styles.howBody}>
               ShieldHer lets you and other women mark locations where you've felt unsafe. When you're within 500m of a reported area, you'll get an automatic warning.
@@ -213,7 +216,7 @@ export function UnsafeAreaScreen() {
           ].map((item, i) => (
             <View key={i} style={styles.stepCard}>
               <View style={styles.stepIcon}>
-                <MaterialCommunityIcons name={item.icon as any} size={22} color="#3B0764" />
+                <MaterialCommunityIcons name={item.icon as any} size={22} color={colors.accentText} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.stepTitle}>{item.title}</Text>
@@ -322,7 +325,7 @@ export function UnsafeAreaScreen() {
               </View>
             ) : (
               <TouchableOpacity style={styles.addBtn} onPress={() => setShowForm(true)} activeOpacity={0.85}>
-                <MaterialCommunityIcons name="map-marker-plus-outline" size={22} color="#3B0764" />
+                <MaterialCommunityIcons name="map-marker-plus-outline" size={22} color={colors.accentText} />
                 <Text style={styles.addBtnText}>Report Unsafe Area</Text>
               </TouchableOpacity>
             )
@@ -333,131 +336,132 @@ export function UnsafeAreaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  header: { backgroundColor: '#3B0764', padding: 20, gap: 12 },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },
-  headerSub: { fontSize: 13, color: '#d7baff', marginTop: 2 },
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    header: { backgroundColor: '#3B0764', padding: 20, gap: 12 },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    headerTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },
+    headerSub: { fontSize: 13, color: '#d7baff', marginTop: 2 },
 
-  tabRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: 3 },
-  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
-  tabBtnActive: { backgroundColor: '#fff' },
-  tabBtnText: { fontSize: 13, fontWeight: '600', color: '#d7baff' },
-  tabBtnTextActive: { color: '#3B0764' },
+    tabRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: 3 },
+    tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
+    tabBtnActive: { backgroundColor: '#fff' },
+    tabBtnText: { fontSize: 13, fontWeight: '600', color: '#d7baff' },
+    tabBtnTextActive: { color: '#3B0764' },
 
-  warningBanner: {
-    backgroundColor: '#b80049',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    gap: 10,
-  },
-  warningTitle: { fontSize: 14, fontWeight: '800', color: '#fff' },
-  warningBody: { fontSize: 12, color: '#ffd6d6', marginTop: 1 },
+    warningBanner: {
+      backgroundColor: '#b80049',
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 14,
+      gap: 10,
+    },
+    warningTitle: { fontSize: 14, fontWeight: '800', color: '#fff' },
+    warningBody: { fontSize: 12, color: '#ffd6d6', marginTop: 1 },
 
-  empty: { alignItems: 'center', paddingVertical: 48, gap: 12, paddingHorizontal: 24 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1b1c1c' },
-  emptyBody: { fontSize: 14, color: '#4a4452', textAlign: 'center', lineHeight: 21 },
+    empty: { alignItems: 'center', paddingVertical: 48, gap: 12, paddingHorizontal: 24 },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+    emptyBody: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 21 },
 
-  reportCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  reportTypeIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  reportTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' },
-  reportLocation: { fontSize: 15, fontWeight: '700', color: '#1b1c1c', flex: 1 },
-  typeBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  typeBadgeText: { fontSize: 11, fontWeight: '700' },
-  reportDesc: { fontSize: 13, color: '#4a4452', lineHeight: 19, marginBottom: 6 },
-  reportMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  reportMetaText: { fontSize: 11, color: '#9ca3af', marginRight: 8 },
-  deleteBtn: { padding: 4 },
+    reportCard: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      padding: 14,
+      flexDirection: 'row',
+      gap: 12,
+      alignItems: 'flex-start',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    reportTypeIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    reportTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' },
+    reportLocation: { fontSize: 15, fontWeight: '700', color: colors.text, flex: 1 },
+    typeBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+    typeBadgeText: { fontSize: 11, fontWeight: '700' },
+    reportDesc: { fontSize: 13, color: colors.textSecondary, lineHeight: 19, marginBottom: 6 },
+    reportMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    reportMetaText: { fontSize: 11, color: '#9ca3af', marginRight: 8 },
+    deleteBtn: { padding: 4 },
 
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#3B0764',
-    borderStyle: 'dashed',
-    marginTop: 4,
-  },
-  addBtnText: { color: '#3B0764', fontSize: 15, fontWeight: '600' },
+    addBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      padding: 16,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: '#3B0764',
+      borderStyle: 'dashed',
+      marginTop: 4,
+    },
+    addBtnText: { color: colors.accentText, fontSize: 15, fontWeight: '600' },
 
-  form: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    gap: 12,
-    marginTop: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  formTitle: { fontSize: 16, fontWeight: '700', color: '#1b1c1c' },
-  formSubtitle: { fontSize: 13, color: '#7c7483', marginTop: -6 },
-  input: {
-    borderWidth: 1.5,
-    borderColor: '#cdc3d4',
-    borderRadius: 10,
-    padding: 13,
-    fontSize: 15,
-    color: '#1b1c1c',
-    backgroundColor: '#F9F5FF',
-  },
-  typeLabel: { fontSize: 12, fontWeight: '700', color: '#4a4452', textTransform: 'uppercase', letterSpacing: 0.5 },
-  typeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#cdc3d4',
-    backgroundColor: '#fff',
-  },
-  typeChipActive: { borderColor: '#3B0764', backgroundColor: '#EDE9FE' },
-  typeChipText: { fontSize: 13, color: '#4a4452', fontWeight: '500' },
-  typeChipTextActive: { color: '#3B0764', fontWeight: '700' },
-  formBtns: { flexDirection: 'row', gap: 10 },
-  cancelBtn: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1.5, borderColor: '#cdc3d4', alignItems: 'center' },
-  cancelBtnText: { color: '#4a4452', fontWeight: '600', fontSize: 14 },
-  submitBtn: { flex: 2, padding: 12, borderRadius: 10, backgroundColor: '#3B0764', alignItems: 'center' },
-  submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+    form: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      gap: 12,
+      marginTop: 4,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    formTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+    formSubtitle: { fontSize: 13, color: colors.textSecondary, marginTop: -6 },
+    input: {
+      borderWidth: 1.5,
+      borderColor: colors.inputBorder,
+      borderRadius: 10,
+      padding: 13,
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.inputBg,
+    },
+    typeLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
+    typeChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+      borderWidth: 1.5,
+      borderColor: colors.chipBorder,
+      backgroundColor: colors.card,
+    },
+    typeChipActive: { borderColor: '#3B0764', backgroundColor: '#EDE9FE' },
+    typeChipText: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
+    typeChipTextActive: { color: '#3B0764', fontWeight: '700' },
+    formBtns: { flexDirection: 'row', gap: 10 },
+    cancelBtn: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1.5, borderColor: colors.chipBorder, alignItems: 'center' },
+    cancelBtnText: { color: colors.textSecondary, fontWeight: '600', fontSize: 14 },
+    submitBtn: { flex: 2, padding: 12, borderRadius: 10, backgroundColor: '#3B0764', alignItems: 'center' },
+    submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
-  // How it works
-  howCard: { backgroundColor: '#EDE9FE', borderRadius: 16, padding: 20, alignItems: 'center', gap: 12 },
-  howTitle: { fontSize: 18, fontWeight: '800', color: '#3B0764', textAlign: 'center' },
-  howBody: { fontSize: 14, color: '#4a4452', textAlign: 'center', lineHeight: 21 },
-  stepCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  stepIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#EDE9FE', alignItems: 'center', justifyContent: 'center' },
-  stepTitle: { fontSize: 15, fontWeight: '700', color: '#1b1c1c', marginBottom: 4 },
-  stepBody: { fontSize: 13, color: '#4a4452', lineHeight: 19 },
-});
+    howCard: { backgroundColor: '#EDE9FE', borderRadius: 16, padding: 20, alignItems: 'center', gap: 12 },
+    howTitle: { fontSize: 18, fontWeight: '800', color: colors.accentText, textAlign: 'center' },
+    howBody: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 21 },
+    stepCard: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      padding: 16,
+      flexDirection: 'row',
+      gap: 12,
+      alignItems: 'flex-start',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    stepIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#EDE9FE', alignItems: 'center', justifyContent: 'center' },
+    stepTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 },
+    stepBody: { fontSize: 13, color: colors.textSecondary, lineHeight: 19 },
+  });
+}

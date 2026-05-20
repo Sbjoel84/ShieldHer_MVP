@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import { useContacts } from '../context/ContactsContext';
 import { appendLog } from '../utils/activityLog';
+import { useTheme, ThemeColors } from '../theme';
 
 const DURATION_OPTIONS = [5, 10, 15, 20, 30, 45, 60];
 
@@ -41,6 +42,8 @@ async function getLocationMsg(): Promise<string> {
 export function CheckInTimerScreen() {
   const { contacts } = useContacts();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [phase, setPhase] = useState<Phase>('setup');
   const [selectedMinutes, setSelectedMinutes] = useState(20);
   const [destination, setDestination] = useState('');
@@ -246,7 +249,7 @@ export function CheckInTimerScreen() {
 
   // ── SETUP PHASE ────────────────────────────────────────────────────────────
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#fcf9f8' }} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: 40 }}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerIconWrap}>
@@ -329,7 +332,7 @@ export function CheckInTimerScreen() {
 
         {/* Start button */}
         <TouchableOpacity style={styles.startBtn} onPress={startTimer} activeOpacity={0.85}>
-          <MaterialCommunityIcons name="timer-play-outline" size={24} color="#fff" />
+          <MaterialCommunityIcons name="timer-outline" size={24} color="#fff" />
           <Text style={styles.startBtnText}>Start {selectedMinutes}-Minute Timer</Text>
         </TouchableOpacity>
       </View>
@@ -337,194 +340,196 @@ export function CheckInTimerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  // ── Setup ──────────────────────────────────────────────────────────────────
-  header: {
-    backgroundColor: '#310065',
-    padding: 24,
-    gap: 8,
-  },
-  headerIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  headerTitle: { fontSize: 26, fontWeight: '800', color: '#fff' },
-  headerSub: { fontSize: 14, color: '#d7baff', lineHeight: 20 },
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    // ── Setup ──────────────────────────────────────────────────────────────────
+    header: {
+      backgroundColor: '#310065',
+      padding: 24,
+      gap: 8,
+    },
+    headerIconWrap: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
+    headerTitle: { fontSize: 26, fontWeight: '800', color: '#fff' },
+    headerSub: { fontSize: 14, color: '#d7baff', lineHeight: 20 },
 
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#4a4452', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 },
+    sectionLabel: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 },
 
-  durationGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  durationChip: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#cdc3d4',
-    backgroundColor: '#fff',
-    minWidth: 64,
-    alignItems: 'center',
-  },
-  durationChipActive: { borderColor: '#310065', backgroundColor: '#eddcff' },
-  durationChipText: { fontSize: 16, fontWeight: '700', color: '#4a4452' },
-  durationChipTextActive: { color: '#310065' },
+    durationGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    durationChip: {
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: colors.chipBorder,
+      backgroundColor: colors.card,
+      minWidth: 64,
+      alignItems: 'center',
+    },
+    durationChipActive: { borderColor: '#310065', backgroundColor: '#eddcff' },
+    durationChipText: { fontSize: 16, fontWeight: '700', color: colors.textSecondary },
+    durationChipTextActive: { color: '#310065' },
 
-  input: {
-    borderWidth: 1.5,
-    borderColor: '#cdc3d4',
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 15,
-    color: '#1b1c1c',
-    backgroundColor: '#fff',
-  },
+    input: {
+      borderWidth: 1.5,
+      borderColor: colors.inputBorder,
+      borderRadius: 12,
+      padding: 14,
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.inputBg,
+    },
 
-  contactsCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  contactsCardTitle: { fontSize: 15, fontWeight: '700', color: '#1b1c1c' },
-  contactsCardSub: { fontSize: 13, color: '#4a4452', marginTop: 2 },
+    contactsCard: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    contactsCardTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+    contactsCardSub: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
 
-  infoCard: {
-    backgroundColor: '#ede9fe',
-    borderRadius: 12,
-    padding: 14,
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'flex-start',
-  },
-  infoText: { flex: 1, fontSize: 13, color: '#4c1d95', lineHeight: 19 },
+    infoCard: {
+      backgroundColor: '#ede9fe',
+      borderRadius: 12,
+      padding: 14,
+      flexDirection: 'row',
+      gap: 10,
+      alignItems: 'flex-start',
+    },
+    infoText: { flex: 1, fontSize: 13, color: '#4c1d95', lineHeight: 19 },
 
-  startBtn: {
-    backgroundColor: '#310065',
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  startBtnText: { color: '#fff', fontWeight: '800', fontSize: 18 },
+    startBtn: {
+      backgroundColor: '#310065',
+      borderRadius: 16,
+      paddingVertical: 18,
+      paddingHorizontal: 24,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+    },
+    startBtnText: { color: '#fff', fontWeight: '800', fontSize: 18 },
 
-  // ── Active ─────────────────────────────────────────────────────────────────
-  activeContainer: {
-    flex: 1,
-    backgroundColor: '#310065',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 28,
-    gap: 16,
-  },
-  activeContainerUrgent: { backgroundColor: '#7c0020' },
+    // ── Active ─────────────────────────────────────────────────────────────────
+    activeContainer: {
+      flex: 1,
+      backgroundColor: '#310065',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 28,
+      gap: 16,
+    },
+    activeContainerUrgent: { backgroundColor: '#7c0020' },
 
-  activeLabel: { fontSize: 15, color: '#d7baff', fontWeight: '600', textAlign: 'center' },
+    activeLabel: { fontSize: 15, color: '#d7baff', fontWeight: '600', textAlign: 'center' },
 
-  destRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  destText: { fontSize: 14, color: '#d7baff' },
+    destRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    destText: { fontSize: 14, color: '#d7baff' },
 
-  progressTrack: {
-    width: '100%',
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    flexDirection: 'row',
-    overflow: 'hidden',
-  },
-  progressFill: { backgroundColor: '#c084fc', borderRadius: 3 },
+    progressTrack: {
+      width: '100%',
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      flexDirection: 'row',
+      overflow: 'hidden',
+    },
+    progressFill: { backgroundColor: '#c084fc', borderRadius: 3 },
 
-  countdown: { fontSize: 88, fontWeight: '900', color: '#fff', letterSpacing: -4, lineHeight: 96 },
-  countdownUrgent: { color: '#ff6b6b' },
-  countdownSub: { fontSize: 16, color: '#d7baff', marginTop: -8 },
+    countdown: { fontSize: 88, fontWeight: '900', color: '#fff', letterSpacing: -4, lineHeight: 96 },
+    countdownUrgent: { color: '#ff6b6b' },
+    countdownSub: { fontSize: 16, color: '#d7baff', marginTop: -8 },
 
-  imSafeBtn: {
-    backgroundColor: '#22c55e',
-    borderRadius: 20,
-    paddingVertical: 22,
-    paddingHorizontal: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    width: '100%',
-    justifyContent: 'center',
-    marginTop: 8,
-    shadowColor: '#15803d',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  imSafeBtnText: { color: '#fff', fontWeight: '900', fontSize: 26 },
+    imSafeBtn: {
+      backgroundColor: '#22c55e',
+      borderRadius: 20,
+      paddingVertical: 22,
+      paddingHorizontal: 40,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      width: '100%',
+      justifyContent: 'center',
+      marginTop: 8,
+      shadowColor: '#15803d',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    imSafeBtnText: { color: '#fff', fontWeight: '900', fontSize: 26 },
 
-  activeSecondaryRow: { flexDirection: 'row', gap: 12, width: '100%' },
-  cancelTimerBtn: { flex: 1, padding: 14, alignItems: 'center', borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)' },
-  cancelTimerText: { color: '#d7baff', fontWeight: '600', fontSize: 14 },
-  sendSosBtn: {
-    flex: 1, padding: 14, alignItems: 'center', borderRadius: 12,
-    backgroundColor: '#b80049', flexDirection: 'row', justifyContent: 'center', gap: 6,
-  },
-  sendSosBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+    activeSecondaryRow: { flexDirection: 'row', gap: 12, width: '100%' },
+    cancelTimerBtn: { flex: 1, padding: 14, alignItems: 'center', borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)' },
+    cancelTimerText: { color: '#d7baff', fontWeight: '600', fontSize: 14 },
+    sendSosBtn: {
+      flex: 1, padding: 14, alignItems: 'center', borderRadius: 12,
+      backgroundColor: '#b80049', flexDirection: 'row', justifyContent: 'center', gap: 6,
+    },
+    sendSosBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
-  activeContactsNote: { fontSize: 13, color: '#c084fc', textAlign: 'center', marginTop: 4 },
+    activeContactsNote: { fontSize: 13, color: '#c084fc', textAlign: 'center', marginTop: 4 },
 
-  // ── Expired ────────────────────────────────────────────────────────────────
-  expiredContainer: {
-    flex: 1,
-    backgroundColor: '#1b0035',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 20,
-  },
-  expiredIconWrap: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#b80049',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  expiredTitle: { fontSize: 32, fontWeight: '900', color: '#fff' },
-  expiredBody: { fontSize: 16, color: '#c084fc', textAlign: 'center', lineHeight: 24 },
+    // ── Expired ────────────────────────────────────────────────────────────────
+    expiredContainer: {
+      flex: 1,
+      backgroundColor: '#1b0035',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 32,
+      gap: 20,
+    },
+    expiredIconWrap: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: '#b80049',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+    },
+    expiredTitle: { fontSize: 32, fontWeight: '900', color: '#fff' },
+    expiredBody: { fontSize: 16, color: '#c084fc', textAlign: 'center', lineHeight: 24 },
 
-  safeBtn: {
-    backgroundColor: '#22c55e',
-    borderRadius: 18,
-    paddingVertical: 20,
-    paddingHorizontal: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    width: '100%',
-  },
-  safeBtnText: { color: '#fff', fontWeight: '900', fontSize: 24 },
+    safeBtn: {
+      backgroundColor: '#22c55e',
+      borderRadius: 18,
+      paddingVertical: 20,
+      paddingHorizontal: 40,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      width: '100%',
+    },
+    safeBtnText: { color: '#fff', fontWeight: '900', fontSize: 24 },
 
-  sosExpiredBtn: {
-    backgroundColor: '#b80049',
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    width: '100%',
-  },
-  sosExpiredBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-});
+    sosExpiredBtn: {
+      backgroundColor: '#b80049',
+      borderRadius: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 32,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      width: '100%',
+    },
+    sosExpiredBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  });
+}

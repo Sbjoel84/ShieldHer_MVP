@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { readLog, clearLog, LogEntry, LogType } from '../utils/activityLog';
+import { useTheme, ThemeColors } from '../theme';
 
 type FilterType = 'all' | LogType;
 
@@ -52,6 +53,8 @@ function groupByDate(entries: LogEntry[]): { date: string; items: LogEntry[] }[]
 }
 
 export function ActivityLogScreen() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<FilterType>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -169,64 +172,68 @@ export function ActivityLogScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F9F5FF' },
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.background },
 
-  filterBar: { maxHeight: 56, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EDE9FE' },
-  filterContent: { paddingHorizontal: 12, paddingVertical: 10, gap: 8, flexDirection: 'row' },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  chipActive: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
-  chipText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-  chipTextActive: { color: '#fff' },
+    filterBar: { maxHeight: 56, backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
+    filterContent: { paddingHorizontal: 12, paddingVertical: 10, gap: 8, flexDirection: 'row' },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: colors.chipBg,
+      borderWidth: 1,
+      borderColor: colors.chipBorder,
+    },
+    chipActive: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
+    chipText: { fontSize: 13, fontWeight: '600', color: colors.chipText },
+    chipTextActive: { color: '#fff' },
 
-  content: { padding: 16, gap: 16, paddingBottom: 48 },
+    content: { padding: 16, gap: 16, paddingBottom: 48 },
 
-  empty: { alignItems: 'center', gap: 12, paddingTop: 80, paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#1b1c1c' },
-  emptySub: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 22 },
+    empty: { alignItems: 'center', gap: 12, paddingTop: 80, paddingHorizontal: 32 },
+    emptyTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
+    emptySub: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
 
-  group: { gap: 8 },
-  groupDate: { fontSize: 13, fontWeight: '700', color: '#9CA3AF', marginLeft: 4 },
+    group: { gap: 8 },
+    groupDate: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginLeft: 4 },
 
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#3B0764',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  divider: { height: 1, backgroundColor: '#F3F4F6', marginLeft: 68 },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      overflow: 'hidden',
+      shadowColor: '#3B0764',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    divider: { height: 1, backgroundColor: colors.divider, marginLeft: 68 },
 
-  row: { flexDirection: 'row', padding: 14, gap: 12 },
-  icon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  rowBody: { flex: 1, gap: 4 },
-  rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rowTitle: { fontSize: 14, fontWeight: '700', color: '#1b1c1c', flex: 1 },
-  rowTime: { fontSize: 12, color: '#9CA3AF' },
-  rowDetail: { fontSize: 12, color: '#6B7280', lineHeight: 18 },
-  badge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginTop: 2 },
-  badgeText: { fontSize: 11, fontWeight: '700' },
+    row: { flexDirection: 'row', padding: 14, gap: 12 },
+    icon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+    rowBody: { flex: 1, gap: 4 },
+    rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    rowTitle: { fontSize: 14, fontWeight: '700', color: colors.text, flex: 1 },
+    rowTime: { fontSize: 12, color: colors.textMuted },
+    rowDetail: { fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+    badge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginTop: 2 },
+    badgeText: { fontSize: 11, fontWeight: '700' },
 
-  clearBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#FECACA',
-    backgroundColor: '#FFF5F5',
-  },
-  clearBtnText: { fontSize: 14, fontWeight: '600', color: '#DC2626' },
-});
+    clearBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: '#FECACA',
+      backgroundColor: '#FFF5F5',
+    },
+    clearBtnText: { fontSize: 14, fontWeight: '600', color: '#DC2626' },
+  });
+}

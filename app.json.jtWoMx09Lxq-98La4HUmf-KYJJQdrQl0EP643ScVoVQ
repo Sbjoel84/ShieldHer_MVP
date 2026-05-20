@@ -12,7 +12,7 @@
     },
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
@@ -52,6 +52,7 @@
       "eas": {
         "projectId": "9f39e567-e791-4eed-952c-2be9c71a09cf"
       }
-    }
+    },
+    "owner": "joelsb"
   }
 }

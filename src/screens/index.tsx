@@ -9,3 +9,6 @@ export { CheckInTimerScreen } from './CheckInTimerScreen';
 export { SafetyTipsScreen } from './SafetyTipsScreen';
 export { UnsafeAreaScreen } from './UnsafeAreaScreen';
 export { TriggerMethodsScreen } from './TriggerMethodsScreen';
+export { VolumeButtonScreen } from './VolumeButtonScreen';
+export { PowerButtonScreen } from './PowerButtonScreen';
+export { VoiceSafeWordScreen } from './VoiceSafeWordScreen';

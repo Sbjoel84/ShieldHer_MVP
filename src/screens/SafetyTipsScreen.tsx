@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme, ThemeColors } from '../theme';
 
 interface Tip {
   text: string;
@@ -163,51 +164,55 @@ const HELPLINES: Helpline[] = [
 ];
 
 function HelplineCard({ item }: { item: Helpline }) {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   return (
     <TouchableOpacity
-      style={styles.helplineCard}
+      style={s.helplineCard}
       onPress={() => Linking.openURL(`tel:${item.number}`)}
       activeOpacity={0.8}
     >
-      <View style={[styles.helplineIcon, { backgroundColor: item.color }]}>
+      <View style={[s.helplineIcon, { backgroundColor: item.color }]}>
         <MaterialCommunityIcons name="phone" size={20} color="#fff" />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.helplineName}>{item.name}</Text>
-        <Text style={styles.helplineDesc}>{item.desc}</Text>
+        <Text style={s.helplineName}>{item.name}</Text>
+        <Text style={s.helplineDesc}>{item.desc}</Text>
       </View>
-      <Text style={[styles.helplineNumber, { color: item.color }]}>{item.number}</Text>
+      <Text style={[s.helplineNumber, { color: item.color }]}>{item.number}</Text>
     </TouchableOpacity>
   );
 }
 
 function CategoryCard({ cat }: { cat: Category }) {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <View style={styles.catCard}>
+    <View style={s.catCard}>
       <TouchableOpacity
-        style={styles.catHeader}
+        style={s.catHeader}
         onPress={() => setExpanded(e => !e)}
         activeOpacity={0.8}
       >
-        <View style={[styles.catIcon, { backgroundColor: cat.bgColor }]}>
+        <View style={[s.catIcon, { backgroundColor: cat.bgColor }]}>
           <MaterialCommunityIcons name={cat.icon as any} size={22} color={cat.color} />
         </View>
-        <Text style={styles.catTitle}>{cat.title}</Text>
+        <Text style={s.catTitle}>{cat.title}</Text>
         <MaterialCommunityIcons
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={22}
-          color="#7c7483"
+          color={colors.textMuted}
         />
       </TouchableOpacity>
 
       {expanded && (
-        <View style={styles.catBody}>
+        <View style={s.catBody}>
           {cat.tips.map((tip, i) => (
-            <View key={i} style={styles.tipRow}>
-              <View style={[styles.tipBullet, { backgroundColor: cat.color }]} />
-              <Text style={styles.tipText}>{tip.text}</Text>
+            <View key={i} style={s.tipRow}>
+              <View style={[s.tipBullet, { backgroundColor: cat.color }]} />
+              <Text style={s.tipText}>{tip.text}</Text>
             </View>
           ))}
         </View>
@@ -218,34 +223,36 @@ function CategoryCard({ cat }: { cat: Category }) {
 
 export function SafetyTipsScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [tab, setTab] = useState<'tips' | 'helplines'>('tips');
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F9F5FF' }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <Text style={styles.headerTitle}>Safety Guide</Text>
-        <Text style={styles.headerSub}>Practical tips and emergency helplines for girls and women in Nigeria.</Text>
+      <View style={[s.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={s.headerTitle}>Safety Guide</Text>
+        <Text style={s.headerSub}>Practical tips and emergency helplines for girls and women in Nigeria.</Text>
 
-        <View style={styles.tabRow}>
+        <View style={s.tabRow}>
           <TouchableOpacity
-            style={[styles.tabBtn, tab === 'tips' && styles.tabBtnActive]}
+            style={[s.tabBtn, tab === 'tips' && s.tabBtnActive]}
             onPress={() => setTab('tips')}
           >
-            <Text style={[styles.tabBtnText, tab === 'tips' && styles.tabBtnTextActive]}>Safety Tips</Text>
+            <Text style={[s.tabBtnText, tab === 'tips' && s.tabBtnTextActive]}>Safety Tips</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tabBtn, tab === 'helplines' && styles.tabBtnActive]}
+            style={[s.tabBtn, tab === 'helplines' && s.tabBtnActive]}
             onPress={() => setTab('helplines')}
           >
-            <Text style={[styles.tabBtnText, tab === 'helplines' && styles.tabBtnTextActive]}>Helplines</Text>
+            <Text style={[s.tabBtnText, tab === 'helplines' && s.tabBtnTextActive]}>Helplines</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {tab === 'tips' ? (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
-          <Text style={styles.sectionNote}>
+          <Text style={s.sectionNote}>
             Tap any category to expand. These tips are designed for everyday situations in Nigeria.
           </Text>
           {CATEGORIES.map(cat => (
@@ -254,17 +261,17 @@ export function SafetyTipsScreen() {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
-          <View style={styles.emergencyBanner}>
+          <View style={s.emergencyBanner}>
             <MaterialCommunityIcons name="phone-alert" size={24} color="#dc2626" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.emergencyBannerTitle}>In immediate danger?</Text>
-              <Text style={styles.emergencyBannerBody}>Call 112 now. It works even without airtime.</Text>
+              <Text style={s.emergencyBannerTitle}>In immediate danger?</Text>
+              <Text style={s.emergencyBannerBody}>Call 112 now. It works even without airtime.</Text>
             </View>
             <TouchableOpacity
-              style={styles.call112Btn}
+              style={s.call112Btn}
               onPress={() => Linking.openURL('tel:112')}
             >
-              <Text style={styles.call112Text}>CALL 112</Text>
+              <Text style={s.call112Text}>CALL 112</Text>
             </TouchableOpacity>
           </View>
 
@@ -272,9 +279,9 @@ export function SafetyTipsScreen() {
             <HelplineCard key={h.number} item={h} />
           ))}
 
-          <View style={styles.naptipNote}>
+          <View style={s.naptipNote}>
             <MaterialCommunityIcons name="shield-check" size={18} color="#7c3aed" />
-            <Text style={styles.naptipNoteText}>
+            <Text style={s.naptipNoteText}>
               NAPTIP (National Agency for the Prohibition of Trafficking in Persons) handles gender-based violence, trafficking, and sexual assault cases. All calls are confidential.
             </Text>
           </View>
@@ -284,89 +291,91 @@ export function SafetyTipsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  header: { backgroundColor: '#3B0764', padding: 20, gap: 8 },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },
-  headerSub: { fontSize: 13, color: '#C4B5FD', lineHeight: 18 },
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    header: { backgroundColor: '#3B0764', padding: 20, gap: 8 },
+    headerTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },
+    headerSub: { fontSize: 13, color: '#C4B5FD', lineHeight: 18 },
 
-  tabRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: 3, marginTop: 4 },
-  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
-  tabBtnActive: { backgroundColor: '#fff' },
-  tabBtnText: { fontSize: 14, fontWeight: '600', color: '#C4B5FD' },
-  tabBtnTextActive: { color: '#3B0764' },
+    tabRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: 3, marginTop: 4 },
+    tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
+    tabBtnActive: { backgroundColor: '#fff' },
+    tabBtnText: { fontSize: 14, fontWeight: '600', color: '#C4B5FD' },
+    tabBtnTextActive: { color: '#3B0764' },
 
-  sectionNote: { fontSize: 13, color: '#6B7280', marginBottom: 4, lineHeight: 18 },
+    sectionNote: { fontSize: 13, color: colors.textSecondary, marginBottom: 4, lineHeight: 18 },
 
-  catCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  catHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 12,
-  },
-  catIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  catTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: '#1b1c1c' },
-  catBody: { padding: 16, paddingTop: 4, gap: 10, borderTopWidth: 1, borderTopColor: '#f0eded' },
-  tipRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  tipBullet: { width: 6, height: 6, borderRadius: 3, marginTop: 7, flexShrink: 0 },
-  tipText: { flex: 1, fontSize: 14, color: '#1b1c1c', lineHeight: 21 },
+    catCard: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    catHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      gap: 12,
+    },
+    catIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    catTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.text },
+    catBody: { padding: 16, paddingTop: 4, gap: 10, borderTopWidth: 1, borderTopColor: colors.divider },
+    tipRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+    tipBullet: { width: 6, height: 6, borderRadius: 3, marginTop: 7, flexShrink: 0 },
+    tipText: { flex: 1, fontSize: 14, color: colors.text, lineHeight: 21 },
 
-  helplineCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  helplineIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  helplineName: { fontSize: 14, fontWeight: '700', color: '#1b1c1c' },
-  helplineDesc: { fontSize: 12, color: '#7c7483', marginTop: 1 },
-  helplineNumber: { fontSize: 15, fontWeight: '800' },
+    helplineCard: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    helplineIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+    helplineName: { fontSize: 14, fontWeight: '700', color: colors.text },
+    helplineDesc: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
+    helplineNumber: { fontSize: 15, fontWeight: '800' },
 
-  emergencyBanner: {
-    backgroundColor: '#fff5f5',
-    borderRadius: 14,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1.5,
-    borderColor: '#fca5a5',
-  },
-  emergencyBannerTitle: { fontSize: 15, fontWeight: '700', color: '#dc2626' },
-  emergencyBannerBody: { fontSize: 13, color: '#7f1d1d', marginTop: 2 },
-  call112Btn: { backgroundColor: '#dc2626', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
-  call112Text: { color: '#fff', fontWeight: '800', fontSize: 13 },
+    emergencyBanner: {
+      backgroundColor: '#fff5f5',
+      borderRadius: 14,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderWidth: 1.5,
+      borderColor: '#fca5a5',
+    },
+    emergencyBannerTitle: { fontSize: 15, fontWeight: '700', color: '#dc2626' },
+    emergencyBannerBody: { fontSize: 13, color: '#7f1d1d', marginTop: 2 },
+    call112Btn: { backgroundColor: '#dc2626', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
+    call112Text: { color: '#fff', fontWeight: '800', fontSize: 13 },
 
-  naptipNote: {
-    backgroundColor: '#ede9fe',
-    borderRadius: 12,
-    padding: 14,
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'flex-start',
-    marginTop: 4,
-  },
-  naptipNoteText: { flex: 1, fontSize: 13, color: '#4c1d95', lineHeight: 19 },
-});
+    naptipNote: {
+      backgroundColor: '#ede9fe',
+      borderRadius: 12,
+      padding: 14,
+      flexDirection: 'row',
+      gap: 10,
+      alignItems: 'flex-start',
+      marginTop: 4,
+    },
+    naptipNoteText: { flex: 1, fontSize: 13, color: '#4c1d95', lineHeight: 19 },
+  });
+}
