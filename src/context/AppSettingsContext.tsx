@@ -19,7 +19,7 @@ const AppSettingsContext = createContext<AppSettingsContextType | null>(null);
 
 export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const [childMode, setChildModeState] = useState(false);
-  const [darkMode, setDarkModeState] = useState(false);
+  const [darkMode, setDarkModeState] = useState(true);
   const [onboardingDone, setOnboardingDone] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -32,7 +32,9 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       .then(([cm, od, dm]) => {
         if (cm === 'true') setChildModeState(true);
         if (od === 'true') setOnboardingDone(true);
-        if (dm === 'true') setDarkModeState(true);
+        if (dm === 'false') setDarkModeState(false);
+        else if (dm === 'true') setDarkModeState(true);
+        // if dm === null (first launch), keep default true
       })
       .catch(() => {})
       .finally(() => setLoaded(true));

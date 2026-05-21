@@ -1,62 +1,32 @@
-import React, { useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
+  TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
+  Animated,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, ThemeColors } from '../theme';
+import { triggerSOS } from '../utils/triggerSOS';
 
-const STEPS = [
-  {
-    icon: 'volume-plus',
-    color: '#1D4ED8',
-    bg: '#DBEAFE',
-    label: 'Vol UP',
-    description: 'Press the Volume Up button once firmly.',
-  },
-  {
-    icon: 'volume-minus',
-    color: '#7C3AED',
-    bg: '#EDE9FE',
-    label: 'Vol DOWN',
-    description: 'Immediately press Volume Down once.',
-  },
-  {
-    icon: 'volume-plus',
-    color: '#1D4ED8',
-    bg: '#DBEAFE',
-    label: 'Vol UP',
-    description: 'Press Volume Up again — SOS fires instantly.',
-  },
-];
+// Required sequence: Vol UP → Vol DOWN → Vol UP
+const SEQUENCE = [
+  { icon: 'volume-plus', color: '#1D4ED8', bg: '#DBEAFE', label: 'Vol UP' },
+  { icon: 'volume-minus', color: '#7C3AED', bg: '#EDE9FE', label: 'Vol DOWN' },
+  { icon: 'volume-plus', color: '#1D4ED8', bg: '#DBEAFE', label: 'Vol UP' },
+] as const;
+
+const STEP_TIMEOUT_MS = 2000;
 
 const HOW_IT_WORKS = [
-  { icon: 'cellphone-lock', text: 'Works from lock screen — no need to unlock your phone.' },
-  { icon: 'eye-off-outline', text: 'Completely discreet — looks like you\'re adjusting volume.' },
-  { icon: 'pocket', text: 'Can be triggered with your phone in your pocket.' },
-  { icon: 'timer-outline', text: 'All three presses must happen within 2 seconds.' },
-  { icon: 'bell-ring-outline', text: 'Triggers the same SOS as shaking — full alert to your circle.' },
-];
-
-const WHY_NOT_YET = [
-  {
-    icon: 'shield-key-outline',
-    title: 'OS Permission Required',
-    body: 'Android requires a system-level accessibility permission to intercept hardware button presses while the screen is off. We\'re implementing this carefully to avoid draining your battery.',
-  },
-  {
-    icon: 'apple',
-    title: 'iOS Support',
-    body: 'On iPhone, this will hook into AssistiveTouch or the Emergency SOS shortcut. Apple\'s APIs make this possible but require extra integration work.',
-  },
-  {
-    icon: 'clock-fast',
-    title: 'Coming in v1.1',
-    body: 'This feature is in active development and is targeted for the next major release. Your safe word and settings are already being stored for when it goes live.',
-  },
+  { icon: 'eye-off-outline', text: 'Completely discreet — looks like adjusting volume.' },
+  { icon: 'timer-outline', text: 'Each step must follow within 2 seconds — slow taps reset.' },
+  { icon: 'bell-ring-outline', text: 'Fires the full SOS — SMS + live location to your Trusted Circle.' },
+  { icon: 'cellphone', text: 'Tap the buttons below in order to test it now.' },
 ];
 
 export function VolumeButtonScreen() {
@@ -64,56 +34,154 @@ export function VolumeButtonScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
 
+  const [step, setStep] = useState(0); // 0 = waiting, 1 = done step 1, 2 = done step 2, 3 = fired
+  const [firing, setFiring] = useState(false);
+  const stepTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scaleAnims = useRef(SEQUENCE.map(() => new Animated.Value(1))).current;
+
+  const resetSequence = useCallback(() => {
+    if (stepTimer.current) clearTimeout(stepTimer.current);
+    setStep(0);
+  }, []);
+
+  const pulseStep = useCallback((index: number) => {
+    Animated.sequence([
+      Animated.timing(scaleAnims[index], { toValue: 0.85, duration: 70, useNativeDriver: true }),
+      Animated.timing(scaleAnims[index], { toValue: 1, duration: 120, useNativeDriver: true }),
+    ]).start();
+  }, [scaleAnims]);
+
+  const handleStepTap = useCallback(async (tappedIndex: number) => {
+    if (firing) return;
+    if (tappedIndex !== step) {
+      // Wrong button — reset
+      resetSequence();
+      return;
+    }
+
+    pulseStep(tappedIndex);
+    if (stepTimer.current) clearTimeout(stepTimer.current);
+
+    const nextStep = step + 1;
+
+    if (nextStep >= SEQUENCE.length) {
+      // Sequence complete — fire SOS
+      setStep(nextStep);
+      setFiring(true);
+
+      const result = await triggerSOS();
+
+      setFiring(false);
+      setStep(0);
+
+      if (result.success) {
+        Alert.alert(
+          '🚨 SOS Sent',
+          `Emergency alert sent to ${result.contactCount} contact${result.contactCount !== 1 ? 's' : ''} with your location.`,
+          [{ text: 'OK' }],
+        );
+      } else {
+        Alert.alert(
+          'No Contacts',
+          'Add emergency contacts in your Trusted Circle before using SOS.',
+          [{ text: 'OK' }],
+        );
+      }
+    } else {
+      setStep(nextStep);
+      // Auto-reset if next step not tapped in time
+      stepTimer.current = setTimeout(resetSequence, STEP_TIMEOUT_MS);
+    }
+  }, [firing, step, pulseStep, resetSequence]);
+
+  const stepLabel = () => {
+    if (firing) return 'Sending SOS...';
+    if (step === 0) return 'Tap Vol UP to begin';
+    if (step === 1) return 'Now tap Vol DOWN';
+    if (step === 2) return 'Now tap Vol UP again!';
+    return 'Done!';
+  };
+
   return (
     <ScrollView style={styles.root} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}>
       {/* Hero */}
       <View style={styles.hero}>
         <View style={styles.heroIconRow}>
-          <View style={styles.heroIconWrap}>
-            <MaterialCommunityIcons name="volume-minus" size={28} color="#fff" />
-          </View>
-          <MaterialCommunityIcons name="arrow-right" size={20} color="rgba(255,255,255,0.5)" />
-          <View style={styles.heroIconWrap}>
-            <MaterialCommunityIcons name="volume-plus" size={28} color="#fff" />
-          </View>
-          <MaterialCommunityIcons name="arrow-right" size={20} color="rgba(255,255,255,0.5)" />
-          <View style={styles.heroIconWrap}>
-            <MaterialCommunityIcons name="volume-minus" size={28} color="#fff" />
-          </View>
+          {SEQUENCE.map((s, i) => (
+            <React.Fragment key={i}>
+              <View style={[styles.heroIconWrap, i < step && styles.heroIconDone]}>
+                <MaterialCommunityIcons name={s.icon as any} size={28} color="#fff" />
+              </View>
+              {i < SEQUENCE.length - 1 && (
+                <MaterialCommunityIcons name="arrow-right" size={20} color="rgba(255,255,255,0.5)" />
+              )}
+            </React.Fragment>
+          ))}
         </View>
         <Text style={styles.heroTitle}>Volume Button Pattern</Text>
         <Text style={styles.heroSub}>
-          Trigger an SOS using your volume buttons — no screen needed.
+          Press Vol UP → Vol DOWN → Vol UP to fire an instant SOS discreetly.
         </Text>
-        <View style={styles.comingSoonBadge}>
-          <MaterialCommunityIcons name="clock-outline" size={14} color="#1D4ED8" />
-          <Text style={styles.comingSoonText}>Coming in v1.1</Text>
+        <View style={styles.activeBadge}>
+          <MaterialCommunityIcons name="check-circle" size={14} color="#16A34A" />
+          <Text style={styles.activeText}>Active — tap below to test</Text>
         </View>
       </View>
 
-      {/* Pattern sequence */}
-      <Text style={styles.sectionLabel}>The Pattern</Text>
-      <View style={styles.patternRow}>
-        {STEPS.map((step, i) => (
-          <React.Fragment key={i}>
-            <View style={styles.patternStep}>
-              <View style={[styles.patternIcon, { backgroundColor: step.bg }]}>
-                <MaterialCommunityIcons name={step.icon as any} size={26} color={step.color} />
-              </View>
-              <Text style={[styles.patternLabel, { color: step.color }]}>{step.label}</Text>
-            </View>
-            {i < STEPS.length - 1 && (
-              <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} style={{ marginTop: 10 }} />
-            )}
-          </React.Fragment>
-        ))}
-      </View>
-      <View style={styles.timingBadge}>
-        <MaterialCommunityIcons name="timer" size={14} color="#D97706" />
-        <Text style={styles.timingText}>All 3 presses within 2 seconds</Text>
+      {/* Interactive sequence */}
+      <Text style={styles.sectionLabel}>Tap in Sequence</Text>
+      <View style={styles.triggerCard}>
+        <Text style={styles.triggerHint}>{stepLabel()}</Text>
+
+        {/* Step buttons */}
+        <View style={styles.sequenceRow}>
+          {SEQUENCE.map((s, i) => {
+            const isDone = i < step;
+            const isCurrent = i === step && !firing;
+            return (
+              <React.Fragment key={i}>
+                <TouchableOpacity
+                  onPress={() => handleStepTap(i)}
+                  activeOpacity={0.8}
+                  disabled={firing}
+                >
+                  <Animated.View style={[
+                    styles.seqBtn,
+                    { backgroundColor: s.bg, transform: [{ scale: scaleAnims[i] }] },
+                    isCurrent && styles.seqBtnActive,
+                    isDone && styles.seqBtnDone,
+                  ]}>
+                    {isDone ? (
+                      <MaterialCommunityIcons name="check" size={28} color="#16A34A" />
+                    ) : (
+                      <MaterialCommunityIcons name={s.icon as any} size={28} color={isCurrent ? '#fff' : s.color} />
+                    )}
+                    <Text style={[styles.seqLabel, isCurrent && { color: '#fff' }, isDone && { color: '#16A34A' }]}>
+                      {s.label}
+                    </Text>
+                  </Animated.View>
+                </TouchableOpacity>
+                {i < SEQUENCE.length - 1 && (
+                  <MaterialCommunityIcons name="chevron-right" size={24} color={colors.textMuted} style={{ marginTop: 16 }} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </View>
+
+        <View style={styles.timingBadge}>
+          <MaterialCommunityIcons name="timer" size={14} color="#D97706" />
+          <Text style={styles.timingText}>Each step within 2 seconds</Text>
+        </View>
+
+        {step > 0 && !firing && (
+          <TouchableOpacity onPress={resetSequence} activeOpacity={0.7}>
+            <Text style={styles.resetText}>Reset sequence</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Step by step */}
+      {/* How it works */}
       <Text style={styles.sectionLabel}>How It Works</Text>
       <View style={styles.card}>
         {HOW_IT_WORKS.map((item, i) => (
@@ -126,25 +194,10 @@ export function VolumeButtonScreen() {
         ))}
       </View>
 
-      {/* Why not yet */}
-      <Text style={styles.sectionLabel}>Why Not Available Yet</Text>
-      {WHY_NOT_YET.map((item, i) => (
-        <View key={i} style={styles.reasonCard}>
-          <View style={styles.reasonIconWrap}>
-            <MaterialCommunityIcons name={item.icon as any} size={22} color="#1D4ED8" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reasonTitle}>{item.title}</Text>
-            <Text style={styles.reasonBody}>{item.body}</Text>
-          </View>
-        </View>
-      ))}
-
-      {/* Until then */}
       <View style={styles.infoBox}>
         <MaterialCommunityIcons name="shield-check" size={18} color="#1D4ED8" />
         <Text style={styles.infoText}>
-          While you wait, use the Shake-to-Alert or 5-Tap trigger — both are active now and work just as discreetly.
+          Complete the Vol UP → Vol DOWN → Vol UP pattern to instantly send your GPS location and SOS SMS to your entire Trusted Circle.
         </Text>
       </View>
     </ScrollView>
@@ -172,19 +225,20 @@ function makeStyles(colors: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    heroIconDone: { backgroundColor: '#16A34A' },
     heroTitle: { fontSize: 22, fontWeight: '800', color: '#fff', textAlign: 'center' },
     heroSub: { fontSize: 13, color: '#BFDBFE', textAlign: 'center', lineHeight: 20 },
-    comingSoonBadge: {
+    activeBadge: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      backgroundColor: '#DBEAFE',
+      backgroundColor: '#DCFCE7',
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
       marginTop: 4,
     },
-    comingSoonText: { fontSize: 13, fontWeight: '700', color: '#1D4ED8' },
+    activeText: { fontSize: 13, fontWeight: '700', color: '#16A34A' },
 
     sectionLabel: {
       fontSize: 12,
@@ -195,25 +249,39 @@ function makeStyles(colors: ThemeColors) {
       marginTop: 4,
     },
 
-    patternRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'center',
+    triggerCard: {
       backgroundColor: colors.card,
-      borderRadius: 16,
+      borderRadius: 20,
       padding: 20,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
+      alignItems: 'center',
+      gap: 16,
+      borderWidth: 1.5,
+      borderColor: '#1D4ED8',
     },
-    patternStep: { alignItems: 'center', gap: 8 },
-    patternIcon: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+    triggerHint: { fontSize: 14, fontWeight: '600', color: colors.text, textAlign: 'center' },
+
+    sequenceRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    seqBtn: {
+      width: 80,
+      height: 88,
+      borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 6,
+      borderWidth: 2,
+      borderColor: 'transparent',
     },
-    patternLabel: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+    seqBtnActive: {
+      backgroundColor: '#1D4ED8',
+      borderColor: '#1D4ED8',
+      shadowColor: '#1D4ED8',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    seqBtnDone: { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' },
+    seqLabel: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4, color: '#1D4ED8' },
 
     timingBadge: {
       flexDirection: 'row',
@@ -225,9 +293,10 @@ function makeStyles(colors: ThemeColors) {
       borderRadius: 10,
       paddingHorizontal: 12,
       paddingVertical: 8,
-      alignSelf: 'center',
     },
     timingText: { fontSize: 13, fontWeight: '600', color: '#D97706' },
+
+    resetText: { fontSize: 13, color: colors.textMuted, textDecorationLine: 'underline' },
 
     card: {
       backgroundColor: colors.card,
@@ -248,28 +317,6 @@ function makeStyles(colors: ThemeColors) {
       flexShrink: 0,
     },
     featureText: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 20, paddingTop: 2 },
-
-    reasonCard: {
-      backgroundColor: colors.card,
-      borderRadius: 14,
-      padding: 14,
-      flexDirection: 'row',
-      gap: 12,
-      alignItems: 'flex-start',
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-    },
-    reasonIconWrap: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: '#DBEAFE',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    },
-    reasonTitle: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 4 },
-    reasonBody: { fontSize: 13, color: colors.textSecondary, lineHeight: 19 },
 
     infoBox: {
       backgroundColor: '#DBEAFE',

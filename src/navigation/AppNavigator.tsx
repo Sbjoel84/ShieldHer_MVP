@@ -25,6 +25,7 @@ import {
   VolumeButtonScreen,
   PowerButtonScreen,
   VoiceSafeWordScreen,
+  BiometricScreen,
 } from '../screens';
 
 
@@ -182,6 +183,17 @@ function MainApp() {
             drawerLabel: 'Safety Guide',
             drawerIcon: ({ color }) => (
               <MaterialCommunityIcons name="lightbulb-on-outline" size={22} color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="Biometric Monitor"
+          component={BiometricScreen}
+          options={{
+            headerShown: false,
+            drawerLabel: 'Biometric AI Monitor',
+            drawerIcon: ({ color }) => (
+              <MaterialCommunityIcons name="heart-pulse" size={22} color={color} />
             ),
           }}
         />

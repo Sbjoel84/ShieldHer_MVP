@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,20 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  Animated,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { useTheme, ThemeColors } from '../theme';
+import { triggerSOS } from '../utils/triggerSOS';
 
 const SAFE_WORD_KEY = '@shieldher_safe_word_v1';
+const LISTEN_SECONDS = 10;
+const AMPLITUDE_THRESHOLD = -35; // dBFS — picks up clear speech
 
 const SUGGESTED_WORDS = ['Pineapple', 'Code Red', 'Sunflower', 'Umbrella', 'Jupiter'];
 
@@ -24,13 +29,6 @@ const TIPS = [
   { icon: 'ear-hearing', text: 'Make it easy to say clearly even when panicked or whispering.' },
   { icon: 'lock-outline', text: 'Keep it private — only you should know it.' },
   { icon: 'shield-star-outline', text: 'Avoid names of people, places, or common objects you discuss daily.' },
-];
-
-const HOW_IT_WORKS = [
-  { step: '1', text: 'You set a secret safe-word on this screen.' },
-  { step: '2', text: 'When Voice Trigger launches, ShieldHer listens in the background (only when enabled).' },
-  { step: '3', text: 'Saying your word triggers a silent SOS — no screen tap needed.' },
-  { step: '4', text: 'Your location and alert are sent to your Trusted Circle instantly.' },
 ];
 
 export function VoiceSafeWordScreen() {
@@ -43,6 +41,16 @@ export function VoiceSafeWordScreen() {
   const [editing, setEditing] = useState(false);
   const [input, setInput] = useState('');
 
+  const [listening, setListening] = useState(false);
+  const [countdown, setCountdown] = useState(LISTEN_SECONDS);
+  const [detected, setDetected] = useState(false);
+
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const meteringInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
+
   const load = useCallback(async () => {
     try {
       const w = await AsyncStorage.getItem(SAFE_WORD_KEY);
@@ -51,6 +59,116 @@ export function VoiceSafeWordScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => { stopListening(true); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function startPulse() {
+    pulseLoop.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.18, duration: 600, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ]),
+    );
+    pulseLoop.current.start();
+  }
+
+  function stopPulse() {
+    pulseLoop.current?.stop();
+    pulseAnim.setValue(1);
+  }
+
+  async function startListening() {
+    if (listening) return;
+
+    try {
+      const { granted } = await Audio.requestPermissionsAsync();
+      if (!granted) {
+        Alert.alert('Microphone Access', 'Allow microphone access so ShieldHer can listen for your safe-word.');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+
+      const { recording } = await Audio.Recording.createAsync({
+        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        isMeteringEnabled: true,
+      });
+      recordingRef.current = recording;
+
+      setListening(true);
+      setDetected(false);
+      setCountdown(LISTEN_SECONDS);
+      startPulse();
+
+      // Countdown
+      let secondsLeft = LISTEN_SECONDS;
+      countdownInterval.current = setInterval(() => {
+        secondsLeft -= 1;
+        setCountdown(secondsLeft);
+        if (secondsLeft <= 0) stopListening(false);
+      }, 1000);
+
+      // Amplitude monitoring
+      meteringInterval.current = setInterval(async () => {
+        try {
+          const status = await recording.getStatusAsync();
+          if (
+            status.isRecording &&
+            typeof status.metering === 'number' &&
+            status.metering > AMPLITUDE_THRESHOLD
+          ) {
+            await onVoiceDetected();
+          }
+        } catch {}
+      }, 300);
+    } catch (e) {
+      Alert.alert('Error', 'Could not start microphone. Please try again.');
+    }
+  }
+
+  async function onVoiceDetected() {
+    await stopListening(false);
+    setDetected(true);
+
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+    const result = await triggerSOS();
+
+    if (result.success) {
+      Alert.alert(
+        '🚨 SOS Sent',
+        `Voice trigger detected!\nEmergency alert sent to ${result.contactCount} contact${result.contactCount !== 1 ? 's' : ''} with your location.`,
+        [{ text: 'OK', onPress: () => setDetected(false) }],
+      );
+    } else {
+      Alert.alert(
+        'Voice Detected — No Contacts',
+        'Add emergency contacts in your Trusted Circle before using SOS.',
+        [{ text: 'OK', onPress: () => setDetected(false) }],
+      );
+    }
+  }
+
+  async function stopListening(silent: boolean) {
+    if (meteringInterval.current) { clearInterval(meteringInterval.current); meteringInterval.current = null; }
+    if (countdownInterval.current) { clearInterval(countdownInterval.current); countdownInterval.current = null; }
+    stopPulse();
+    setListening(false);
+    setCountdown(LISTEN_SECONDS);
+
+    try {
+      if (recordingRef.current) {
+        await recordingRef.current.stopAndUnloadAsync();
+        recordingRef.current = null;
+      }
+    } catch {}
+
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: false }).catch(() => {});
+  }
 
   async function saveWord() {
     const word = input.trim();
@@ -68,33 +186,20 @@ export function VoiceSafeWordScreen() {
     }
   }
 
-  function startEdit() {
-    setInput(safeWord);
-    setEditing(true);
-  }
-
-  function cancelEdit() {
-    setEditing(false);
-    setInput('');
-  }
+  function startEdit() { setInput(safeWord); setEditing(true); }
+  function cancelEdit() { setEditing(false); setInput(''); }
 
   function clearWord() {
-    Alert.alert(
-      'Clear Safe-Word',
-      'Remove your saved safe-word?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            await AsyncStorage.removeItem(SAFE_WORD_KEY);
-            setSafeWord('');
-            setSaved('');
-          },
+    Alert.alert('Clear Safe-Word', 'Remove your saved safe-word?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear', style: 'destructive',
+        onPress: async () => {
+          await AsyncStorage.removeItem(SAFE_WORD_KEY);
+          setSafeWord(''); setSaved('');
         },
-      ],
-    );
+      },
+    ]);
   }
 
   const isWordSet = saved.length > 0;
@@ -103,27 +208,31 @@ export function VoiceSafeWordScreen() {
     <ScrollView style={styles.root} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}>
       {/* Hero */}
       <View style={styles.hero}>
-        <View style={styles.heroIconWrap}>
-          <MaterialCommunityIcons name="microphone-outline" size={40} color="#fff" />
-        </View>
+        <Animated.View style={[styles.heroIconWrap, listening && { transform: [{ scale: pulseAnim }] }]}>
+          <MaterialCommunityIcons
+            name={listening ? 'microphone' : 'microphone-outline'}
+            size={40}
+            color="#fff"
+          />
+        </Animated.View>
         <Text style={styles.heroTitle}>Voice Safe-Word</Text>
         <Text style={styles.heroSub}>
           Say your secret word to silently trigger SOS — even when you can't touch your phone.
         </Text>
-        <View style={styles.comingSoonBadge}>
-          <MaterialCommunityIcons name="clock-outline" size={14} color="#DC2626" />
-          <Text style={styles.comingSoonText}>Feature coming in v1.1</Text>
+        <View style={styles.activeBadge}>
+          <MaterialCommunityIcons name="check-circle" size={14} color="#16A34A" />
+          <Text style={styles.activeText}>Active — set your word &amp; test below</Text>
         </View>
       </View>
 
-      {/* Safe Word Setup — functional now */}
+      {/* Safe Word Setup */}
       <View style={styles.setupCard}>
         <View style={styles.setupHeader}>
           <MaterialCommunityIcons name="key-variant" size={20} color="#7C3AED" />
-          <Text style={styles.setupTitle}>Set Your Safe-Word Now</Text>
+          <Text style={styles.setupTitle}>Set Your Safe-Word</Text>
         </View>
         <Text style={styles.setupBody}>
-          Your word is stored privately on your device and will activate automatically when Voice Trigger launches.
+          Your word is stored privately on your device. When listening mode is active, saying it fires SOS.
         </Text>
 
         {isWordSet && !editing ? (
@@ -147,12 +256,7 @@ export function VoiceSafeWordScreen() {
           <View style={styles.inputArea}>
             <View style={styles.suggestRow}>
               {SUGGESTED_WORDS.map(w => (
-                <TouchableOpacity
-                  key={w}
-                  style={styles.suggestChip}
-                  onPress={() => setInput(w)}
-                  activeOpacity={0.75}
-                >
+                <TouchableOpacity key={w} style={styles.suggestChip} onPress={() => setInput(w)} activeOpacity={0.75}>
                   <Text style={styles.suggestChipText}>{w}</Text>
                 </TouchableOpacity>
               ))}
@@ -181,36 +285,43 @@ export function VoiceSafeWordScreen() {
         )}
       </View>
 
-      {/* Status */}
-      <View style={[styles.statusCard, isWordSet ? styles.statusCardReady : styles.statusCardPending]}>
-        <MaterialCommunityIcons
-          name={isWordSet ? 'shield-check' : 'shield-alert-outline'}
-          size={22}
-          color={isWordSet ? '#16A34A' : '#D97706'}
-        />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.statusTitle, { color: isWordSet ? '#16A34A' : '#D97706' }]}>
-            {isWordSet ? 'Ready for launch' : 'No safe-word set yet'}
-          </Text>
-          <Text style={styles.statusBody}>
-            {isWordSet
-              ? 'Your word is saved. It will activate automatically when Voice Trigger goes live in v1.1.'
-              : 'Set your safe-word now so it\'s ready the moment Voice Trigger launches.'}
-          </Text>
-        </View>
-      </View>
-
-      {/* How it works */}
-      <Text style={styles.sectionLabel}>How Voice Trigger Will Work</Text>
-      <View style={styles.card}>
-        {HOW_IT_WORKS.map((item, i) => (
-          <View key={i} style={[styles.stepRow, i < HOW_IT_WORKS.length - 1 && styles.stepRowBorder]}>
-            <View style={styles.stepNum}>
-              <Text style={styles.stepNumText}>{item.step}</Text>
-            </View>
-            <Text style={styles.stepText}>{item.text}</Text>
+      {/* Voice Listening */}
+      <Text style={styles.sectionLabel}>Voice Trigger</Text>
+      <View style={styles.listenCard}>
+        {!isWordSet ? (
+          <View style={styles.noWordRow}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={20} color="#D97706" />
+            <Text style={styles.noWordText}>Set a safe-word above before activating voice listening.</Text>
           </View>
-        ))}
+        ) : listening ? (
+          <>
+            <Animated.View style={[styles.listenOrb, { transform: [{ scale: pulseAnim }] }]}>
+              <MaterialCommunityIcons name="microphone" size={36} color="#fff" />
+            </Animated.View>
+            <Text style={styles.listeningLabel}>Listening... {countdown}s</Text>
+            <Text style={styles.listeningHint}>Say "{saved}" to trigger SOS</Text>
+            <TouchableOpacity style={styles.stopBtn} onPress={() => stopListening(false)} activeOpacity={0.8}>
+              <MaterialCommunityIcons name="stop-circle" size={18} color="#DC2626" />
+              <Text style={styles.stopBtnText}>Stop Listening</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <View style={styles.listenIdleOrb}>
+              <MaterialCommunityIcons name="microphone-outline" size={36} color="#7C3AED" />
+            </View>
+            <Text style={styles.listenIdleLabel}>
+              {detected ? 'Voice detected — SOS sent!' : `Ready to listen for "${saved}"`}
+            </Text>
+            <TouchableOpacity style={styles.startBtn} onPress={startListening} activeOpacity={0.85}>
+              <MaterialCommunityIcons name="microphone" size={18} color="#fff" />
+              <Text style={styles.startBtnText}>Start Listening ({LISTEN_SECONDS}s)</Text>
+            </TouchableOpacity>
+            <Text style={styles.listenNote}>
+              ShieldHer listens locally on your device for {LISTEN_SECONDS} seconds. No audio is recorded or sent anywhere.
+            </Text>
+          </>
+        )}
       </View>
 
       {/* Tips */}
@@ -226,11 +337,10 @@ export function VoiceSafeWordScreen() {
         ))}
       </View>
 
-      {/* Privacy note */}
       <View style={styles.privacyBox}>
         <MaterialCommunityIcons name="lock-outline" size={18} color="#1D4ED8" />
         <Text style={styles.privacyText}>
-          Your safe-word is stored only on your device. It is never sent to any server and is not visible to anyone else.
+          Your safe-word and voice data are processed entirely on your device. Nothing is ever sent to any server.
         </Text>
       </View>
     </ScrollView>
@@ -259,17 +369,26 @@ function makeStyles(colors: ThemeColors) {
     },
     heroTitle: { fontSize: 22, fontWeight: '800', color: '#fff', textAlign: 'center' },
     heroSub: { fontSize: 13, color: '#DDD6FE', textAlign: 'center', lineHeight: 20 },
-    comingSoonBadge: {
+    activeBadge: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      backgroundColor: '#FEE2E2',
+      backgroundColor: '#DCFCE7',
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
       marginTop: 4,
     },
-    comingSoonText: { fontSize: 13, fontWeight: '700', color: '#DC2626' },
+    activeText: { fontSize: 13, fontWeight: '700', color: '#16A34A' },
+
+    sectionLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+      marginTop: 4,
+    },
 
     setupCard: {
       backgroundColor: colors.card,
@@ -356,27 +475,75 @@ function makeStyles(colors: ThemeColors) {
     },
     saveBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 
-    statusCard: {
-      borderRadius: 14,
-      padding: 14,
+    listenCard: {
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      padding: 24,
+      alignItems: 'center',
+      gap: 14,
+      borderWidth: 1.5,
+      borderColor: '#7C3AED',
+    },
+    noWordRow: {
       flexDirection: 'row',
-      gap: 12,
-      alignItems: 'flex-start',
-      borderWidth: 1,
+      alignItems: 'center',
+      gap: 10,
     },
-    statusCardReady: { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' },
-    statusCardPending: { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
-    statusTitle: { fontSize: 14, fontWeight: '700', marginBottom: 3 },
-    statusBody: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
+    noWordText: { flex: 1, fontSize: 13, color: '#D97706', lineHeight: 19 },
 
-    sectionLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.8,
-      marginTop: 4,
+    listenOrb: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      backgroundColor: '#DC2626',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#DC2626',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.45,
+      shadowRadius: 14,
+      elevation: 8,
     },
+    listeningLabel: { fontSize: 18, fontWeight: '800', color: colors.text },
+    listeningHint: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
+    stopBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: '#DC2626',
+    },
+    stopBtnText: { fontSize: 14, fontWeight: '700', color: '#DC2626' },
+
+    listenIdleOrb: {
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+      backgroundColor: '#EDE9FE',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    listenIdleLabel: { fontSize: 14, fontWeight: '600', color: colors.text, textAlign: 'center' },
+    startBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: '#7C3AED',
+      borderRadius: 14,
+      paddingHorizontal: 24,
+      paddingVertical: 13,
+      shadowColor: '#7C3AED',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.35,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    startBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+    listenNote: { fontSize: 12, color: colors.textMuted, textAlign: 'center', lineHeight: 17, paddingHorizontal: 8 },
 
     card: {
       backgroundColor: colors.card,
@@ -385,20 +552,6 @@ function makeStyles(colors: ThemeColors) {
       borderColor: colors.cardBorder,
       overflow: 'hidden',
     },
-    stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14 },
-    stepRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.divider },
-    stepNum: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: '#EDE9FE',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    },
-    stepNumText: { fontSize: 13, fontWeight: '800', color: '#7C3AED' },
-    stepText: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 20, paddingTop: 4 },
-
     tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14 },
     tipRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.divider },
     tipIcon: {

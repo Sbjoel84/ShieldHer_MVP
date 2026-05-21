@@ -1,92 +1,167 @@
-import React, { useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
+  TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Platform,
+  Alert,
+  Animated,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, ThemeColors } from '../theme';
+import { triggerSOS } from '../utils/triggerSOS';
 
-const PRESS_COUNT = 5;
+const REQUIRED_TAPS = 5;
+const WINDOW_MS = 3000;
 
 const HOW_IT_WORKS = [
-  { icon: 'cellphone', text: 'Works from any screen — active app, lock screen, or even inside your pocket.' },
-  { icon: 'eye-off-outline', text: 'Indistinguishable from accidentally pressing power — no one notices.' },
-  { icon: 'timer-sand', text: 'All 5 presses must be within 3 seconds. A single slow press won\'t trigger it.' },
-  { icon: 'bell-ring-outline', text: 'Fires the full SOS — SMS + location to your entire Trusted Circle.' },
-];
-
-const PLATFORM_NOTES = [
-  {
-    icon: 'android',
-    color: '#15803d',
-    bg: '#DCFCE7',
-    title: 'Android',
-    body: 'Many Android devices already support a 5-press power shortcut for emergency SOS. ShieldHer will hook into that system and add its own alert on top of it.',
-  },
-  {
-    icon: 'apple',
-    color: '#374151',
-    bg: '#F1F5F9',
-    title: 'iPhone',
-    body: 'iOS\'s Emergency SOS (5 power presses) is already built in. ShieldHer will add an extra layer — sending your location and SMS to your circle before calling 112.',
-  },
-];
-
-const COMING_STEPS = [
-  { done: true,  label: 'Feature designed & spec\'d' },
-  { done: true,  label: 'Android native module scaffolded' },
-  { done: false, label: 'Accessibility permission integration' },
-  { done: false, label: 'iOS AssistiveTouch hook' },
-  { done: false, label: 'Beta testing & release' },
+  { icon: 'eye-off-outline', text: 'Completely discreet — looks accidental from the outside.' },
+  { icon: 'timer-sand', text: 'All 5 taps must land within 3 seconds. Slow taps reset the counter.' },
+  { icon: 'bell-ring-outline', text: 'Fires the full SOS — SMS + your live location to your entire Trusted Circle.' },
+  { icon: 'cellphone', text: 'Use the in-app button below to test it at any time.' },
 ];
 
 export function PowerButtonScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const isAndroid = Platform.OS === 'android';
+
+  const [tapCount, setTapCount] = useState(0);
+  const [firing, setFiring] = useState(false);
+  const tapTimestamps = useRef<number[]>([]);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const pulseButton = useCallback(() => {
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.88, duration: 80, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
+    ]).start();
+  }, [scaleAnim]);
+
+  const resetCounter = useCallback(() => {
+    tapTimestamps.current = [];
+    setTapCount(0);
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+  }, []);
+
+  const handleTap = useCallback(async () => {
+    if (firing) return;
+    pulseButton();
+
+    const now = Date.now();
+    tapTimestamps.current.push(now);
+
+    // Drop any taps older than the window
+    tapTimestamps.current = tapTimestamps.current.filter(t => now - t <= WINDOW_MS);
+
+    const count = tapTimestamps.current.length;
+    setTapCount(count);
+
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+
+    if (count >= REQUIRED_TAPS) {
+      setFiring(true);
+      tapTimestamps.current = [];
+      setTapCount(0);
+
+      const result = await triggerSOS();
+
+      setFiring(false);
+      if (result.success) {
+        Alert.alert(
+          '🚨 SOS Sent',
+          `Emergency alert sent to ${result.contactCount} contact${result.contactCount !== 1 ? 's' : ''} with your location.`,
+          [{ text: 'OK' }],
+        );
+      } else {
+        Alert.alert(
+          'No Contacts',
+          'Add emergency contacts in your Trusted Circle before using SOS.',
+          [{ text: 'OK' }],
+        );
+      }
+    } else {
+      // Auto-reset if no more taps in window
+      resetTimer.current = setTimeout(resetCounter, WINDOW_MS);
+    }
+  }, [firing, pulseButton, resetCounter]);
+
+  const progress = Math.min(tapCount / REQUIRED_TAPS, 1);
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}>
       {/* Hero */}
       <View style={styles.hero}>
         <View style={styles.heroPresses}>
-          {Array.from({ length: PRESS_COUNT }).map((_, i) => (
-            <View key={i} style={styles.pressCircle}>
-              <MaterialCommunityIcons name="power" size={22} color="#fff" />
+          {Array.from({ length: REQUIRED_TAPS }).map((_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.pressCircle,
+                i < tapCount && styles.pressCircleActive,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="power"
+                size={22}
+                color={i < tapCount ? '#fff' : 'rgba(255,255,255,0.5)'}
+              />
               <Text style={styles.pressNum}>{i + 1}</Text>
             </View>
           ))}
         </View>
-        <Text style={styles.heroTitle}>Power Button (3–5 Presses)</Text>
+        <Text style={styles.heroTitle}>Power Button (5 Taps)</Text>
         <Text style={styles.heroSub}>
-          Press the power button rapidly 5 times to fire an instant SOS — no unlocking required.
+          Tap the power button 5 times rapidly to fire an instant SOS — no unlocking required.
         </Text>
-        <View style={styles.comingSoonBadge}>
-          <MaterialCommunityIcons name="clock-outline" size={14} color="#DC2626" />
-          <Text style={styles.comingSoonText}>Coming in v1.1</Text>
+        <View style={styles.activeBadge}>
+          <MaterialCommunityIcons name="check-circle" size={14} color="#16A34A" />
+          <Text style={styles.activeText}>Active — tap below to test</Text>
         </View>
       </View>
 
-      {/* Press visualizer */}
-      <Text style={styles.sectionLabel}>The Trigger</Text>
-      <View style={styles.pressCard}>
-        <View style={styles.pressRow}>
-          {Array.from({ length: PRESS_COUNT }).map((_, i) => (
-            <View key={i} style={styles.pressDot}>
-              <MaterialCommunityIcons name="power" size={20} color="#DC2626" />
-            </View>
+      {/* Interactive trigger */}
+      <Text style={styles.sectionLabel}>Tap to Trigger SOS</Text>
+      <View style={styles.triggerCard}>
+        <Text style={styles.triggerHint}>
+          {firing ? 'Sending SOS...' : tapCount === 0 ? 'Tap the button 5 times quickly' : `${tapCount} of ${REQUIRED_TAPS} — keep going!`}
+        </Text>
+
+        {/* Progress dots */}
+        <View style={styles.dotsRow}>
+          {Array.from({ length: REQUIRED_TAPS }).map((_, i) => (
+            <View
+              key={i}
+              style={[styles.dot, i < tapCount && styles.dotActive]}
+            />
           ))}
         </View>
-        <Text style={styles.pressCaption}>5 rapid presses within 3 seconds</Text>
-        <View style={styles.timingBadge}>
-          <MaterialCommunityIcons name="lightning-bolt" size={14} color="#DC2626" />
-          <Text style={styles.timingText}>Each press under 600ms apart</Text>
+
+        {/* Progress bar */}
+        <View style={styles.progressBarBg}>
+          <View style={[styles.progressBarFill, { width: `${progress * 100}%` as any }]} />
         </View>
+
+        {/* Power button */}
+        <TouchableOpacity onPress={handleTap} activeOpacity={0.85} disabled={firing}>
+          <Animated.View style={[styles.powerBtn, firing && styles.powerBtnFiring, { transform: [{ scale: scaleAnim }] }]}>
+            <MaterialCommunityIcons name="power" size={52} color="#fff" />
+            {tapCount > 0 && (
+              <View style={styles.tapBadge}>
+                <Text style={styles.tapBadgeText}>{tapCount}</Text>
+              </View>
+            )}
+          </Animated.View>
+        </TouchableOpacity>
+
+        {tapCount > 0 && !firing && (
+          <TouchableOpacity onPress={resetCounter} activeOpacity={0.7}>
+            <Text style={styles.resetText}>Reset</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* How it works */}
@@ -102,56 +177,10 @@ export function PowerButtonScreen() {
         ))}
       </View>
 
-      {/* Platform notes */}
-      <Text style={styles.sectionLabel}>Platform Support</Text>
-      {PLATFORM_NOTES.map((p, i) => (
-        <View key={i} style={[styles.platformCard, isAndroid && p.icon === 'android' && styles.platformCardHighlight]}>
-          <View style={[styles.platformIcon, { backgroundColor: p.bg }]}>
-            <MaterialCommunityIcons name={p.icon as any} size={22} color={p.color} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={styles.platformTitleRow}>
-              <Text style={styles.platformTitle}>{p.title}</Text>
-              {isAndroid && p.icon === 'android' && (
-                <View style={styles.yourDeviceBadge}>
-                  <Text style={styles.yourDeviceText}>Your device</Text>
-                </View>
-              )}
-              {!isAndroid && p.icon === 'apple' && (
-                <View style={styles.yourDeviceBadge}>
-                  <Text style={styles.yourDeviceText}>Your device</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.platformBody}>{p.body}</Text>
-          </View>
-        </View>
-      ))}
-
-      {/* Development progress */}
-      <Text style={styles.sectionLabel}>Development Progress</Text>
-      <View style={styles.progressCard}>
-        {COMING_STEPS.map((step, i) => (
-          <View key={i} style={[styles.progressRow, i < COMING_STEPS.length - 1 && styles.progressRowBorder]}>
-            <View style={[styles.progressDot, step.done && styles.progressDotDone]}>
-              <MaterialCommunityIcons
-                name={step.done ? 'check' : 'clock-outline'}
-                size={14}
-                color={step.done ? '#fff' : colors.textMuted}
-              />
-            </View>
-            <Text style={[styles.progressLabel, step.done && styles.progressLabelDone]}>
-              {step.label}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Until then */}
       <View style={styles.infoBox}>
         <MaterialCommunityIcons name="shield-check" size={18} color="#DC2626" />
         <Text style={styles.infoText}>
-          Until this launches, the Shake-to-Alert (3 shakes) and the 5-Tap trigger are both active and discreet — use them now.
+          After 5 rapid taps, ShieldHer immediately sends your GPS location and an emergency SMS to every contact in your Trusted Circle.
         </Text>
       </View>
     </ScrollView>
@@ -179,20 +208,21 @@ function makeStyles(colors: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    pressCircleActive: { backgroundColor: '#DC2626' },
     pressNum: { fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: '700', position: 'absolute', bottom: 4 },
     heroTitle: { fontSize: 22, fontWeight: '800', color: '#fff', textAlign: 'center' },
     heroSub: { fontSize: 13, color: '#FECACA', textAlign: 'center', lineHeight: 20 },
-    comingSoonBadge: {
+    activeBadge: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      backgroundColor: '#FEE2E2',
+      backgroundColor: '#DCFCE7',
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
       marginTop: 4,
     },
-    comingSoonText: { fontSize: 13, fontWeight: '700', color: '#DC2626' },
+    activeText: { fontSize: 13, fontWeight: '700', color: '#16A34A' },
 
     sectionLabel: {
       fontSize: 12,
@@ -203,37 +233,68 @@ function makeStyles(colors: ThemeColors) {
       marginTop: 4,
     },
 
-    pressCard: {
+    triggerCard: {
       backgroundColor: colors.card,
-      borderRadius: 16,
-      padding: 20,
+      borderRadius: 20,
+      padding: 24,
       alignItems: 'center',
-      gap: 12,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
+      gap: 16,
+      borderWidth: 1.5,
+      borderColor: '#DC2626',
     },
-    pressRow: { flexDirection: 'row', gap: 10 },
-    pressDot: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: '#FEE2E2',
+    triggerHint: { fontSize: 14, fontWeight: '600', color: colors.text, textAlign: 'center' },
+
+    dotsRow: { flexDirection: 'row', gap: 10 },
+    dot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: colors.chipBg,
+      borderWidth: 1,
+      borderColor: colors.chipBorder,
+    },
+    dotActive: { backgroundColor: '#DC2626', borderColor: '#DC2626' },
+
+    progressBarBg: {
+      width: '80%',
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.chipBg,
+      overflow: 'hidden',
+    },
+    progressBarFill: {
+      height: '100%',
+      backgroundColor: '#DC2626',
+      borderRadius: 3,
+    },
+
+    powerBtn: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      backgroundColor: '#DC2626',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#DC2626',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.45,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    powerBtnFiring: { backgroundColor: '#7C0020' },
+    tapBadge: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: '#fff',
       alignItems: 'center',
       justifyContent: 'center',
     },
-    pressCaption: { fontSize: 14, fontWeight: '700', color: colors.text },
-    timingBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: '#FEF2F2',
-      borderWidth: 1,
-      borderColor: '#FECACA',
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-    },
-    timingText: { fontSize: 12, fontWeight: '600', color: '#DC2626' },
+    tapBadgeText: { fontSize: 13, fontWeight: '800', color: '#DC2626' },
+    resetText: { fontSize: 13, color: colors.textMuted, textDecorationLine: 'underline' },
 
     card: {
       backgroundColor: colors.card,
@@ -254,57 +315,6 @@ function makeStyles(colors: ThemeColors) {
       flexShrink: 0,
     },
     featureText: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 20, paddingTop: 2 },
-
-    platformCard: {
-      backgroundColor: colors.card,
-      borderRadius: 14,
-      padding: 14,
-      flexDirection: 'row',
-      gap: 12,
-      alignItems: 'flex-start',
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-    },
-    platformCardHighlight: { borderColor: '#DC2626', borderWidth: 1.5 },
-    platformIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    },
-    platformTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-    platformTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
-    yourDeviceBadge: {
-      backgroundColor: '#DCFCE7',
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 8,
-    },
-    yourDeviceText: { fontSize: 11, fontWeight: '700', color: '#15803D' },
-    platformBody: { fontSize: 13, color: colors.textSecondary, lineHeight: 19 },
-
-    progressCard: {
-      backgroundColor: colors.card,
-      borderRadius: 16,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-    },
-    progressRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-    progressRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.divider },
-    progressDot: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: colors.chipBg,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    progressDotDone: { backgroundColor: '#16A34A' },
-    progressLabel: { fontSize: 13, color: colors.textMuted },
-    progressLabelDone: { color: colors.text, fontWeight: '600' },
 
     infoBox: {
       backgroundColor: '#FEE2E2',

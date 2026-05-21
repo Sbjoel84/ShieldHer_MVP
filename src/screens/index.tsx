@@ -12,3 +12,4 @@ export { TriggerMethodsScreen } from './TriggerMethodsScreen';
 export { VolumeButtonScreen } from './VolumeButtonScreen';
 export { PowerButtonScreen } from './PowerButtonScreen';
 export { VoiceSafeWordScreen } from './VoiceSafeWordScreen';
+export { BiometricScreen } from './BiometricScreen';
